@@ -1,0 +1,13 @@
+{
+  "scripts": {
+    "generate:proto": "./scripts/INSTALL_PROTOBUF.sh",
+    "build": "npm run generate:proto && tsc"
+  },
+  "devDependencies": {
+    "@protobuf-ts/plugin": "^2.11.0",
+    "@protobuf-ts/protoc": "^2.11.0"
+  },
+  "dependencies": {
+    "@protobuf-ts/runtime": "^2.11.0"
+  }
+}
