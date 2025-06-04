@@ -1,11 +1,15 @@
 {
   "scripts": {
     "generate:proto": "./scripts/INSTALL_PROTOBUF.sh",
-    "build": "npm run generate:proto && tsc"
+    "build": "npm run generate:proto && tsc",
+    "test": "jest"
   },
   "devDependencies": {
     "@protobuf-ts/plugin": "^2.11.0",
-    "@protobuf-ts/protoc": "^2.11.0"
+    "@protobuf-ts/protoc": "^2.11.0",
+    "@types/jest": "^29.5.14",
+    "jest": "^29.7.0",
+    "ts-jest": "^29.3.4"
   },
   "dependencies": {
     "@protobuf-ts/runtime": "^2.11.0"

@@ -13,7 +13,7 @@ import {
     Data_Sensor_DoubleValuesContainer,
     Data_CompressedTimestampsContainer,
     Version
-} from "generated/pcore/pcore";
+} from "@generated/pcore";
 
 export {
     Data as DataPb,
