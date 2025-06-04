@@ -4,8 +4,6 @@ import {MetadataCompressor} from "@/compress/MetadataCompressor";
 import {TimestampsCompressor} from "@/compress/TimestampsCompressor";
 import {SensorCompressor} from "@/compress/SensorCompressor";
 import {InvalidDataException} from "@/Exception";
-import {UnixTimestamps} from "@/models/UnixTimestamp";
-
 
 export class DataCompressor {
     static compress(data: Data): DataPb {
@@ -14,7 +12,10 @@ export class DataCompressor {
         const dataPb = DataPb.create()
 
         dataPb.metadata = MetadataCompressor.compress(data.metaData);
-        dataPb.compressedTimestampsContainer = TimestampsCompressor.compress(data.timestamps)
+
+        if (data.timestamps.length !== 0) {
+            dataPb.compressedTimestampsContainer = TimestampsCompressor.compress(data.timestamps)
+        }
 
         data.sensors.forEach( sensor => {
             dataPb.sensors.push(SensorCompressor.compress(sensor))
@@ -25,18 +26,18 @@ export class DataCompressor {
 
     static validate(data: Data) {
 
-        // case  data.timestamps === undefined && data.sensors.length === 0
+        // case  data.timestamps.length === 0 && data.sensors.length === 0
         // means data are empty, every thing is fine.
 
-        if ( data.timestamps === undefined && data.sensors.length !== 0 ) {
+        if ( data.timestamps.length === 0 && data.sensors.length !== 0 ) {
             throw new InvalidDataException("DataCompressor.validate", "Data must hold unix timestamps if it has sensor data")
         }
 
-        if ( data.timestamps !== undefined  && data.sensors.length === 0 ) {
+        if ( data.timestamps.length !== 0  && data.sensors.length === 0 ) {
             throw new InvalidDataException("DataCompressor.validate", "Data must have sensor data if it holds unix timestamps")
         }
 
-        if (data.timestamps !== undefined && data.sensors.length !== 0) {
+        if (data.timestamps.length !== 0 && data.sensors.length !== 0) {
             const numberOfUnixTimestamps = data.timestamps.length
             data.sensors.forEach( sensor => {
                 switch (sensor.values.oneofKind) {

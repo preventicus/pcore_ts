@@ -1,54 +1,8 @@
 import { SensorCompressor } from '../src/compress/SensorCompressor'
 import { SensorBuilder } from '../src/builder/SensorBuilder'
-import {AccelerometerType, Color, Sensor} from "../src/ProtobufDefinitions";
+import {AccelerometerType, Color, Sensor} from "../src/ProtobufDefinitions"
+import {getIntValues, getDoubleValues, getAccelerometerType, getPhotoplethysmographWavelength, getPhotoplethysmographColor, getElectrocardiogramChannel} from "./util/utils"
 
-function getIntValues(sensor: Sensor): number[] | undefined {
-    if (sensor.values.oneofKind === "intValuesContainer") {
-        return sensor.values.intValuesContainer.values;
-    }
-    return undefined;
-}
-
-function getDoubleValues(sensor: Sensor): number[] | undefined {
-    if (sensor.values.oneofKind === "doubleValuesContainer") {
-        return sensor.values.doubleValuesContainer.values;
-    }
-    return undefined;
-}
-
-function getAccelerometerType(sensor: Sensor): AccelerometerType | undefined {
-    if (sensor.type.oneofKind === "accelerometer") {
-        return sensor.type.accelerometer.type;
-    }
-    return undefined;
-}
-
-function getElectrocardiogramChannel(sensor: Sensor): number | undefined {
-    if (sensor.type.oneofKind === "electrocardiogram") {
-        return sensor.type.electrocardiogram.channel;
-    }
-    return undefined;
-}
-
-function getPhotoplethysmographColor(sensor: Sensor): Color | undefined {
-    if (sensor.type.oneofKind === "photoplethysmograph") {
-        if (sensor.type.photoplethysmograph.light.oneofKind === "color") {
-            return sensor.type.photoplethysmograph.light.color;
-        }
-        return undefined;
-    }
-    return undefined;
-}
-
-function getPhotoplethysmographWavelength(sensor: Sensor): Color | undefined {
-    if (sensor.type.oneofKind === "photoplethysmograph") {
-        if (sensor.type.photoplethysmograph.light.oneofKind === "wavelengthNm") {
-            return sensor.type.photoplethysmograph.light.wavelengthNm;
-        }
-        return undefined;
-    }
-    return undefined;
-}
 
 describe('SensorCompressor', () => {
 
@@ -60,14 +14,14 @@ describe('SensorCompressor', () => {
 
         const compressed = SensorCompressor.compress(sensor)
 
-        expect(compressed.type.oneofKind === "accelerometer").toBe(true)
-        expect(compressed.type.oneofKind === "photoplethysmograph").toBe(false)
-        expect(compressed.type.oneofKind === "electrocardiogram").toBe(false)
+        expect(compressed.type.oneofKind).toBe("accelerometer")
+        expect(compressed.type.oneofKind).not.toBe("photoplethysmograph")
+        expect(compressed.type.oneofKind).not.toBe("electrocardiogram")
 
         expect(getAccelerometerType(compressed)).toBe(AccelerometerType.X_COORDINATE)
 
-        expect(compressed.values.oneofKind === "intValuesContainer").toBe(true)
-        expect(compressed.values.oneofKind === "doubleValuesContainer").toBe(false)
+        expect(compressed.values.oneofKind).toBe("intValuesContainer")
+        expect(compressed.values.oneofKind).not.toBe("doubleValuesContainer")
 
         expect(getIntValues(compressed)!.length).toBe(2)
         expect(getIntValues(compressed)).toEqual([3,1])
@@ -81,14 +35,14 @@ describe('SensorCompressor', () => {
 
         const compressed = SensorCompressor.compress(sensor)
 
-        expect(compressed.type.oneofKind === "accelerometer").toBe(false)
-        expect(compressed.type.oneofKind === "photoplethysmograph").toBe(true)
-        expect(compressed.type.oneofKind === "electrocardiogram").toBe(false)
+        expect(compressed.type.oneofKind).not.toBe("accelerometer")
+        expect(compressed.type.oneofKind).toBe("photoplethysmograph")
+        expect(compressed.type.oneofKind).not.toBe("electrocardiogram")
 
         expect(getPhotoplethysmographWavelength(compressed)).toBe(300)
 
-        expect(compressed.values.oneofKind === "intValuesContainer").toBe(false)
-        expect(compressed.values.oneofKind === "doubleValuesContainer").toBe(true)
+        expect(compressed.values.oneofKind).not.toBe("intValuesContainer")
+        expect(compressed.values.oneofKind).toBe("doubleValuesContainer")
 
         expect(getDoubleValues(compressed)!.length).toBe(2)
         expect(getDoubleValues(compressed)).toEqual([3.1234,4.1234])
@@ -102,14 +56,14 @@ describe('SensorCompressor', () => {
 
         const compressed = SensorCompressor.compress(sensor)
 
-        expect(compressed.type.oneofKind === "accelerometer").toBe(false)
-        expect(compressed.type.oneofKind === "photoplethysmograph").toBe(true)
-        expect(compressed.type.oneofKind === "electrocardiogram").toBe(false)
+        expect(compressed.type.oneofKind).not.toBe("accelerometer")
+        expect(compressed.type.oneofKind).toBe("photoplethysmograph")
+        expect(compressed.type.oneofKind).not.toBe("electrocardiogram")
 
         expect(getPhotoplethysmographColor(compressed)).toBe(Color.RED)
 
-        expect(compressed.values.oneofKind === "intValuesContainer").toBe(false)
-        expect(compressed.values.oneofKind === "doubleValuesContainer").toBe(true)
+        expect(compressed.values.oneofKind).not.toBe("intValuesContainer")
+        expect(compressed.values.oneofKind).toBe("doubleValuesContainer")
 
         expect(getDoubleValues(compressed)!.length).toBe(2)
         expect(getDoubleValues(compressed)).toEqual([3.123,4.123])
@@ -122,14 +76,14 @@ describe('SensorCompressor', () => {
             .build()
         const compressed = SensorCompressor.compress(sensor)
 
-        expect(compressed.type.oneofKind === "accelerometer").toBe(false)
-        expect(compressed.type.oneofKind === "photoplethysmograph").toBe(false)
-        expect(compressed.type.oneofKind === "electrocardiogram").toBe(true)
+        expect(compressed.type.oneofKind).not.toBe("accelerometer")
+        expect(compressed.type.oneofKind).not.toBe("photoplethysmograph")
+        expect(compressed.type.oneofKind).toBe("electrocardiogram")
 
         expect(getElectrocardiogramChannel(compressed)).toBe(2)
 
-        expect(compressed.values.oneofKind === "intValuesContainer").toBe(true)
-        expect(compressed.values.oneofKind === "doubleValuesContainer").toBe(false)
+        expect(compressed.values.oneofKind).toBe("intValuesContainer")
+        expect(compressed.values.oneofKind).not.toBe("doubleValuesContainer")
 
         expect(getIntValues(compressed)!.length).toBe(2)
         expect(getIntValues(compressed)).toEqual([100,100])

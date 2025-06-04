@@ -1,7 +1,6 @@
 import {MetadataBuilder} from "../src/builder/MetadataBuilder"
 import {PcoreVersion} from "../generated/pcore/pcoreVersion"
 import {MetadataCompressor} from "../src/compress/MetadataCompressor"
-import {WrongValueException} from "../src/Exception"
 
 describe('MetadataCompressorTest', () => {
 

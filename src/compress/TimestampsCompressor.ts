@@ -3,11 +3,9 @@ import {CompressedTimestampsContainer} from "@/ProtobufDefinitions";
 import {SectionIdxs} from "@/models/SectionIdxs";
 
 export class TimestampsCompressor {
-    static compress(unixTimestamps?: UnixTimestamps): CompressedTimestampsContainer {
+    static compress(unixTimestamps: UnixTimestamps): CompressedTimestampsContainer {
 
         const compressedTimestampsContainer = CompressedTimestampsContainer.create()
-
-        if (unixTimestamps === undefined) return compressedTimestampsContainer
 
         const sectionIdxs = TimestampsCompressor.findSectionIdxs(unixTimestamps);
         const numberOfSection = sectionIdxs.length

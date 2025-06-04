@@ -4,6 +4,6 @@ import {Sensor} from "@/ProtobufDefinitions";
 
 export interface Data {
     metaData: Metadata
-    timestamps?: UnixTimestamps
+    timestamps: UnixTimestamps
     sensors: Sensor[]
 }
