@@ -8,10 +8,10 @@ PROTO_FILE="pcore.proto"
 OUT_DIR="../generated/pcore"
 DEFAULT_VERSION="0.0.0"
 OUT_FILE="$OUT_DIR/pcoreVersion.ts"
-VERSION_FILE="../.pcore-version"
+VERSION_FILE=".pcore-version"
 
 if [ ! -f "$VERSION_FILE" ]; then
-    echo "❌ Fehler: Versionsdatei $VERSION_FILE nicht gefunden." >&2
+    echo "❌ Error: Version file $VERSION_FILE not found." >&2
     exit 1
 fi
 
@@ -26,7 +26,7 @@ git config advice.detachedHead false
 
 echo ">> Checking out tag: $SPECIFIED_TAG"
 git checkout "tags/$SPECIFIED_TAG" || {
-    echo "❌ Tag '$SPECIFIED_TAG' nicht gefunden." >&2
+    echo "❌ Tag '$SPECIFIED_TAG' not found." >&2
     exit 1
 }
 

@@ -1,13 +1,18 @@
 {
   "scripts": {
     "generate:proto": "./scripts/INSTALL_PROTOBUF.sh",
-    "build": "npm run generate:proto && tsc",
-    "test": "jest"
+    "build": "npm run generate:proto && npm run lint && npm run test && tsc",
+    "test": "jest",
+    "test:coverage": "jest --coverage",
+    "lint": "eslint 'src/**/*.ts' 'tools/**/*.ts' 'tests/**/*.ts'"
   },
   "devDependencies": {
     "@protobuf-ts/plugin": "^2.11.0",
     "@protobuf-ts/protoc": "^2.11.0",
     "@types/jest": "^29.5.14",
+    "@typescript-eslint/eslint-plugin": "^8.33.1",
+    "@typescript-eslint/parser": "^8.33.1",
+    "eslint": "^8.57.1",
     "jest": "^29.7.0",
     "ts-jest": "^29.3.4"
   },

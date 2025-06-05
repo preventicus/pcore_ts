@@ -1,9 +1,9 @@
-import {UnixTimestamps} from "@/models/UnixTimestamp";
-import {Metadata} from "@/ProtobufDefinitions";
-import {Sensor} from "@/ProtobufDefinitions";
+import {UnixTimestamps} from "@/models/UnixTimestamp"
+import {Metadata} from "@/ProtobufDefinitions"
+import {Sensor} from "@/ProtobufDefinitions"
 
 export interface Data {
-    metaData: Metadata
+    metadata?: Metadata
     timestamps: UnixTimestamps
     sensors: Sensor[]
 }
