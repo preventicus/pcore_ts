@@ -4,7 +4,9 @@
     "build": "npm run generate:proto && npm run lint && npm run test && tsc",
     "test": "jest",
     "test:coverage": "jest --coverage",
-    "lint": "eslint 'src/**/*.ts' 'tools/**/*.ts' 'tests/**/*.ts'"
+    "lint": "eslint 'src/**/*.ts' 'tools/**/*.ts' 'tests/**/*.ts' 'example/**/*.ts'",
+    "example:file": "ts-node -r tsconfig-paths/register example/file/fileExample.ts",
+    "example:converter": "ts-node -r tsconfig-paths/register example/converter/converterExample.ts"
   },
   "devDependencies": {
     "@protobuf-ts/plugin": "^2.11.0",
@@ -14,7 +16,9 @@
     "@typescript-eslint/parser": "^8.33.1",
     "eslint": "^8.57.1",
     "jest": "^29.7.0",
-    "ts-jest": "^29.3.4"
+    "ts-jest": "^29.3.4",
+    "ts-node": "^10.9.2",
+    "tsconfig-paths": "^4.2.0"
   },
   "dependencies": {
     "@protobuf-ts/runtime": "^2.11.0"
