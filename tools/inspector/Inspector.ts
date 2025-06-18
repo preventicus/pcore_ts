@@ -1,8 +1,16 @@
 import {DataPb} from "@/ProtobufDefinitions"
 import {UnixTimestamp} from "@/models/UnixTimestamp"
 
+/**
+ * Utility class for inspecting compressed data without full decompression.
+ */
 export class Inspector {
 
+  /**
+   * Returns the first Unix timestamp in the compressed data.
+   * @param dataPb Compressed data protobuf object
+   * @returns First Unix timestamp in milliseconds, or 0 if not present
+   */
   static getFirstUnixTimestamp( dataPb: DataPb): UnixTimestamp {
     if (dataPb.compressedTimestampsContainer === undefined) {
       return 0
@@ -10,6 +18,11 @@ export class Inspector {
     return dataPb.compressedTimestampsContainer.firstUnixTimestampMs
   }
 
+  /**
+   * Returns the last Unix timestamp in the compressed data.
+   * @param dataPb Compressed data protobuf object
+   * @returns Last Unix timestamp in milliseconds, or 0 if not present
+   */
   static getLastUnixTimestamp(dataPb: DataPb): UnixTimestamp {
     if (dataPb.compressedTimestampsContainer === undefined) {
       return 0
@@ -26,6 +39,11 @@ export class Inspector {
     return lastUnixTimestamp
   }
 
+  /**
+   * Returns the number of compressed timestamp sections.
+   * @param dataPb Compressed data protobuf object
+   * @returns Number of timestamp sections
+   */
   static getNumberOfSections( dataPb: DataPb ): number {
     if (dataPb.compressedTimestampsContainer === undefined) {
       return 0
@@ -33,6 +51,12 @@ export class Inspector {
     return dataPb.compressedTimestampsContainer.sectionsSizes.length
   }
 
+  /**
+   * Returns the number of sensor values (elements) in the compressed data.
+   * Uses the first sensor for inspection.
+   * @param dataPb Compressed data protobuf object
+   * @returns Number of sensor data elements
+   */
   static getNumberOfElements(dataPb: DataPb) : number {
     if (dataPb.sensors.length === 0) {
       return 0

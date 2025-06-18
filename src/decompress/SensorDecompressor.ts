@@ -1,7 +1,20 @@
 import {Sensor} from "@/ProtobufDefinitions"
 
-
+/**
+ * Provides functionality to decompress sensor data.
+ * Reconstructs original values from delta-encoded integer sequences or clones raw floating-point data.
+ */
 export class SensorDecompressor {
+
+  /**
+   * Decompresses a `Sensor` object from its compressed protobuf form.
+   *
+   * - If the sensor uses integer values, it performs delta decoding.
+   * - If the sensor uses double values, it returns a deep clone.
+   *
+   * @param sensorPb - The compressed protobuf sensor object.
+   * @returns A fully decompressed `Sensor` object.
+   */
   static decompress(sensorPb: Sensor): Sensor {
 
     const sensor = Sensor.create()

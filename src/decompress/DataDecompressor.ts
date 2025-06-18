@@ -5,8 +5,21 @@ import {TimestampsDecompressor} from "@/decompress/TimestampsDecompressor"
 import {SensorDecompressor} from "@/decompress/SensorDecompressor"
 import {InvalidDataException} from "@/Exception"
 
+/**
+ * Provides functionality to decompress `DataPb` objects into full `Data` objects.
+ * This includes metadata, decompressed timestamps, and sensor data.
+ * Ensures the consistency and structural validity of compressed input before decompression.
+ */
 export class DataDecompressor {
 
+  /**
+   * Decompresses a `DataPb` object back into its original `Data` structure.
+   * Validates the structure and integrity of the compressed data before reconstruction.
+   *
+   * @param dataPb - The compressed data in protocol buffer format (`DataPb`).
+   * @returns A fully reconstructed `Data` object including metadata, timestamps, and sensors.
+   * @throws {InvalidDataException} If the compressed data is structurally invalid or inconsistent.
+   */
   static decompress(dataPb: DataPb): Data {
 
     DataDecompressor.validate(dataPb)
@@ -32,6 +45,13 @@ export class DataDecompressor {
     }
   }
 
+  /**
+   * Validates the internal consistency of the given compressed data object.
+   * Ensures that section sizes and durations are structurally valid and match sensor lengths.
+   *
+   * @param dataPb - The `DataPb` object to validate.
+   * @throws {InvalidDataException} If the compressed structure or metadata violates integrity rules.
+   */
   private static validate(dataPb: DataPb) {
 
     if (dataPb.compressedTimestampsContainer !== undefined && dataPb.sensors.length === 0) {

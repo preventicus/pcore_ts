@@ -55,8 +55,20 @@ interface DecompressedPcoreJson {
     sensors: DecompressedSensor[]
 }
 
+/**
+ * The Converter class provides static methods to convert between
+ * compressed Protobuf data (DataPb) and a human-readable JSON format.
+ */
 export class Converter {
 
+    /**
+     * Converts a protobuf data object to JSON.
+     *
+     * @param dataPb - The protobuf data object.
+     * @param dataForm - Indicates whether the data is compressed or decompressed.
+     * @returns The JSON string representation of the data.
+     * @throws {Error} Throws if internal parsing fails or unsupported sensor types are encountered.
+     */
     static convertToJson(dataPb: DataPb, dataForm: DataForm): string {
         switch (dataForm) {
             case DataForm.Compressed: {
@@ -74,6 +86,14 @@ export class Converter {
         }
     }
 
+    /**
+     * Converts a JSON string back into a DataPb object.
+     * Accepts both compressed and decompressed JSON structures.
+     *
+     * @param json - The JSON string to convert.
+     * @returns A DataPb object reconstructed from the JSON.
+     * @throws {Error} Throws if internal parsing fails or unsupported sensor types are encountered.
+     */
     static convertFromJson(json: string): DataPb {
         const parsedJson = JSON.parse(json)
         if ("compressedTimestampsContainer" in parsedJson) {
@@ -88,6 +108,13 @@ export class Converter {
         return DataCompressor.compress(data)
     }
 
+    /**
+     * Converts a Sensor protobuf object into a decompressed JSON representation.
+     *
+     * @param sensor - The Sensor protobuf object.
+     * @returns A DecompressedSensor JSON object.
+     * @throws {Error} If the sensor type or value type is unsupported.
+     */
     private static parseToDecompressedSensor(sensor: Sensor): DecompressedSensor {
         let values: number[] = []
         switch (sensor.values.oneofKind) {
@@ -154,12 +181,23 @@ export class Converter {
         }
     }
 
+    /**
+     * Converts a decompressed JSON representation of a sensor back into a Sensor protobuf object.
+     *
+     * @param sensor - The decompressed sensor JSON object.
+     * @returns A Sensor protobuf object.
+     * @throws {Error} If the sensor type or value type is unsupported.
+     */
     private static parseFromDecompressedSensor(sensor: any): Sensor {
 
         const photoplethysmographColorMap: Record<string, Color> = {
             GREEN: Color.GREEN,
             RED: Color.RED,
             BLUE: Color.BLUE
+        }
+
+        if (sensor.valuesType !== "intValuesContainer" || sensor.valuesType !== "doubleValuesContainer") {
+            throw new Error(`Unsupported sensor value type: ${sensor.valuesType}`)
         }
 
         const result: any = {
@@ -212,6 +250,8 @@ export class Converter {
                         }
                     }
                 }
+            } else {
+                throw new Error("Unsupported sensor type")
             }
         }
         return result

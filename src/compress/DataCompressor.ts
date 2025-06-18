@@ -5,7 +5,25 @@ import {TimestampsCompressor} from "@/compress/TimestampsCompressor"
 import {SensorCompressor} from "@/compress/SensorCompressor"
 import {InvalidDataException} from "@/Exception"
 
+/**
+ * Provides functionality to compress full `Data` objects, including metadata,
+ * timestamps, and sensor values. Ensures the data is valid and consistent
+ * before compression.
+ */
 export class DataCompressor {
+
+  /**
+   * Compresses a complete `Data` object into a `DataPb` object suitable for efficient
+   * transmission or storage.
+   *
+   * This method validates the internal consistency of the data (e.g., matching lengths
+   * of timestamps and sensor values) and compresses each part individually using their
+   * corresponding compressor classes.
+   *
+   * @param data - The `Data` object containing metadata, timestamps, and sensor data.
+   * @returns A compressed `DataPb` representation of the input.
+   * @throws {InvalidDataException} If the data is inconsistent (e.g., timestamps present without sensors, or mismatched lengths).
+   */
   static compress(data: Data): DataPb {
     DataCompressor.validate(data)
 
@@ -24,6 +42,13 @@ export class DataCompressor {
     return dataPb
   }
 
+  /**
+   * Validates the consistency of the given `Data` object.
+   * Ensures that sensor data and timestamps are aligned and both are present or absent together.
+   *
+   * @param data - The `Data` object to validate.
+   * @throws {InvalidDataException} If the data violates required structural constraints.
+   */
   private static validate(data: Data) {
 
     // case  data.timestamps.length === 0 && data.sensors.length === 0

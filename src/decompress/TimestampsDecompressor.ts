@@ -1,8 +1,21 @@
 import {CompressedTimestampsContainer} from "@/ProtobufDefinitions"
 import {UnixTimestamps} from "@/models/UnixTimestamp"
 
-
+/**
+ * Responsible for decompressing delta-encoded and sectioned Unix timestamps.
+ * Reconstructs the original timestamp sequence from compressed sections and durations.
+ */
 export class TimestampsDecompressor {
+
+  /**
+   * Decompresses a `CompressedTimestampsContainer` into an array of Unix timestamps in milliseconds.
+   *
+   * - Reconstructs timestamps by iteratively adding section-level and intra-section durations.
+   * - Returns an empty array if the input container is `undefined`.
+   *
+   * @param compressedTimestampContainer - The compressed representation of timestamps.
+   * @returns The full array of decompressed Unix timestamps.
+   */
   static decompress(compressedTimestampContainer?: CompressedTimestampsContainer): UnixTimestamps {
 
     if (compressedTimestampContainer === undefined) {

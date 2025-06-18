@@ -2,7 +2,21 @@ import {UnixTimestamps} from "@/models/UnixTimestamp"
 import {CompressedTimestampsContainer} from "@/ProtobufDefinitions"
 import {SectionIdxs} from "@/models/SectionIdxs"
 
+/**
+ * Utility class for compressing sequences of Unix timestamps into a structured format
+ * that represents regular patterns in the time intervals.
+ */
 export class TimestampsCompressor {
+  /**
+   * Compresses a sequence of Unix timestamps into a `CompressedTimestampsContainer`.
+   *
+   * The compression algorithm detects sections of timestamps with consistent step durations,
+   * and stores metadata such as section sizes, inner and outer section durations.
+   *
+   * @param unixTimestamps - The array of Unix timestamps in milliseconds.
+   * @returns A `CompressedTimestampsContainer` representing the compressed form of the timestamps.
+   */
+
   static compress(unixTimestamps: UnixTimestamps): CompressedTimestampsContainer {
 
     const compressedTimestampsContainer = CompressedTimestampsContainer.create()
