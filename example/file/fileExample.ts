@@ -1,6 +1,6 @@
 import {DataPb} from "../../src/ProtobufDefinitions"
 import {DataCompressor} from "../../src/compress/DataCompressor"
-import {File} from "@tools/File/File"
+import {File} from "../../tools/file/File"
 import {DataDecompressor} from "../../src/decompress/DataDecompressor"
 import {data as dataWrite} from "../ExampleData"
 

@@ -3,8 +3,8 @@ import {AccelerometerType, Color, Sensor} from "../../src/ProtobufDefinitions";
 import {SensorBuilder} from "../../src/builder/SensorBuilder";
 import {DataBuilder} from "../../src/builder/DataBuilder";
 import {DataCompressor} from "../../src/compress/DataCompressor";
-import {Converter} from "../../tools/Converter/Converter";
-import {DataForm} from "../../tools/Converter/DataForm";
+import {Converter} from "../../tools/converter/Converter";
+import {DataForm} from "../../tools/converter/DataForm";
 import {data} from "../ExampleData"
 
 function main() {
