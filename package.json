@@ -5,6 +5,7 @@
     "test": "jest",
     "test:coverage": "jest --coverage",
     "lint": "eslint 'src/**/*.ts' 'tools/**/*.ts' 'tests/**/*.ts' 'example/**/*.ts'",
+    "lint:fix": "eslint 'src/**/*.ts' 'tools/**/*.ts' 'tests/**/*.ts' 'example/**/*.ts' --fix",
     "example:file": "ts-node -r tsconfig-paths/register example/file/fileExample.ts",
     "example:converter": "ts-node -r tsconfig-paths/register example/converter/converterExample.ts",
     "example:inspector": "ts-node -r tsconfig-paths/register example/inspector/inspectorExample.ts"

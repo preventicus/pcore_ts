@@ -38,26 +38,26 @@ import {data} from "../ExampleData"
 
 function main() {
 
-    const dataPb = DataCompressor.compress(data)
+  const dataPb = DataCompressor.compress(data)
 
-    const decompressedJson = Converter.convertToJson(dataPb, DataForm.Decompressed)
-    const compressedJson = Converter.convertToJson(dataPb, DataForm.Compressed)
+  const decompressedJson = Converter.convertToJson(dataPb, DataForm.Decompressed)
+  const compressedJson = Converter.convertToJson(dataPb, DataForm.Compressed)
 
-    /* eslint-disable no-console */
-    console.log(decompressedJson)
-    console.log("\n")
-    console.log(compressedJson)
-    /* eslint-enable no-console */
+  /* eslint-disable no-console */
+  console.log(decompressedJson)
+  console.log("\n")
+  console.log(compressedJson)
+  /* eslint-enable no-console */
 
-    const dataPbConvertedFromDecompressedJson = Converter.convertFromJson(decompressedJson)
-    const dataPbConvertedFromCompressedJson = Converter.convertFromJson(compressedJson)
+  const dataPbConvertedFromDecompressedJson = Converter.convertFromJson(decompressedJson)
+  const dataPbConvertedFromCompressedJson = Converter.convertFromJson(compressedJson)
 
-    /* eslint-disable no-console */
-    console.log("\n")
-    console.log(JSON.stringify(dataPbConvertedFromDecompressedJson))
-    console.log("\n")
-    console.log(JSON.stringify(dataPbConvertedFromCompressedJson))
-    /* eslint-disable no-console */
+  /* eslint-disable no-console */
+  console.log("\n")
+  console.log(JSON.stringify(dataPbConvertedFromDecompressedJson))
+  console.log("\n")
+  console.log(JSON.stringify(dataPbConvertedFromCompressedJson))
+  /* eslint-disable no-console */
 }
 
 main()
