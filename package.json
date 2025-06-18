@@ -1,4 +1,9 @@
 {
+  "name": "@preventicus/pcore",
+  "version": "2.0.0",
+  "description": "Pcore TypeScript utilities for sensor data compression",
+  "author": "Steve Merschel",
+  "license": "BSD-3-Clause",
   "scripts": {
     "generate:proto": "./scripts/INSTALL_PROTOBUF.sh",
     "build": "npm run generate:proto && npm run lint && npm run test && tsc",
