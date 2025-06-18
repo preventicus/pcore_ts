@@ -6,7 +6,8 @@
     "test:coverage": "jest --coverage",
     "lint": "eslint 'src/**/*.ts' 'tools/**/*.ts' 'tests/**/*.ts' 'example/**/*.ts'",
     "example:file": "ts-node -r tsconfig-paths/register example/file/fileExample.ts",
-    "example:converter": "ts-node -r tsconfig-paths/register example/converter/converterExample.ts"
+    "example:converter": "ts-node -r tsconfig-paths/register example/converter/converterExample.ts",
+    "example:inspector": "ts-node -r tsconfig-paths/register example/inspector/inspectorExample.ts"
   },
   "devDependencies": {
     "@protobuf-ts/plugin": "^2.11.0",
