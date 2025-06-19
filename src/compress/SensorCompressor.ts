@@ -31,13 +31,12 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 */
 
-import {IntValuesContainer, Sensor} from "@/ProtobufDefinitions"
+import { IntValuesContainer, Sensor } from "@/ProtobufDefinitions"
 
 /**
  * Provides compression utilities for sensor data, including delta encoding for integer sequences.
  */
 export class SensorCompressor {
-
   /**
    * Compresses a `Sensor` object by applying delta encoding to integer value sequences.
    *

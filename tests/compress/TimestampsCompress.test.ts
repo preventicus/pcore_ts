@@ -34,7 +34,6 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 import { TimestampsCompressor } from "../../src/compress/TimestampsCompressor"
 
 describe("TimestampsCompressor", () => {
-
   test("ZeroTimestampTest", () => {
     const unixTimestamps: number[] = []
 

@@ -31,15 +31,14 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 */
 
-import {CompressedTimestampsContainer} from "@/ProtobufDefinitions"
-import {UnixTimestamps} from "@/models/UnixTimestamp"
+import { CompressedTimestampsContainer } from "@/ProtobufDefinitions"
+import { UnixTimestamps } from "@/models/UnixTimestamp"
 
 /**
  * Responsible for decompressing delta-encoded and sectioned Unix timestamps.
  * Reconstructs the original timestamp sequence from compressed sections and durations.
  */
 export class TimestampsDecompressor {
-
   /**
    * Decompresses a `CompressedTimestampsContainer` into an array of Unix timestamps in milliseconds.
    *
@@ -50,7 +49,6 @@ export class TimestampsDecompressor {
    * @returns The full array of decompressed Unix timestamps.
    */
   static decompress(compressedTimestampContainer?: CompressedTimestampsContainer): UnixTimestamps {
-
     if (compressedTimestampContainer === undefined) {
       return []
     }
@@ -78,5 +76,4 @@ export class TimestampsDecompressor {
 
     return unixTimestamps
   }
-
 }

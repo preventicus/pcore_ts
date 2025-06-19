@@ -31,9 +31,9 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 */
 
-import {UnixTimestamps} from "@/models/UnixTimestamp"
-import {CompressedTimestampsContainer} from "@/ProtobufDefinitions"
-import {SectionIdxs} from "@/models/SectionIdxs"
+import { UnixTimestamps } from "@/models/UnixTimestamp"
+import { CompressedTimestampsContainer } from "@/ProtobufDefinitions"
+import { SectionIdxs } from "@/models/SectionIdxs"
 
 /**
  * Utility class for compressing sequences of Unix timestamps into a structured format
@@ -51,7 +51,6 @@ export class TimestampsCompressor {
    */
 
   static compress(unixTimestamps: UnixTimestamps): CompressedTimestampsContainer {
-
     const compressedTimestampsContainer = CompressedTimestampsContainer.create()
 
     const sectionIdxs = TimestampsCompressor.findSectionIdxs(unixTimestamps)
@@ -67,7 +66,7 @@ export class TimestampsCompressor {
     compressedTimestampsContainer.outerSectionsDurationsMs.push(0)
 
     if (numberOfSection === 1) {
-      compressedTimestampsContainer.innerSectionsDurationsMs.push( sizeUnixTimestamps === 1 ? 0 : unixTimestamps[1] - firstUnixTimestampInMs )
+      compressedTimestampsContainer.innerSectionsDurationsMs.push(sizeUnixTimestamps === 1 ? 0 : unixTimestamps[1] - firstUnixTimestampInMs)
       compressedTimestampsContainer.sectionsSizes.push(sizeUnixTimestamps)
       return compressedTimestampsContainer
     }
@@ -86,7 +85,7 @@ export class TimestampsCompressor {
 
     const lastSectionIdx = sectionIdxs[sectionIdxs.length - 1]
     compressedTimestampsContainer.outerSectionsDurationsMs.push(unixTimestamps[lastSectionIdx] - unixTimestamps[sectionIdxs[numberOfSection - 2]])
-    compressedTimestampsContainer.innerSectionsDurationsMs.push(sizeUnixTimestamps - 1 === lastSectionIdx ? 0 : unixTimestamps[lastSectionIdx+1] - unixTimestamps[lastSectionIdx])
+    compressedTimestampsContainer.innerSectionsDurationsMs.push(sizeUnixTimestamps - 1 === lastSectionIdx ? 0 : unixTimestamps[lastSectionIdx + 1] - unixTimestamps[lastSectionIdx])
     compressedTimestampsContainer.sectionsSizes.push(sizeUnixTimestamps - lastSectionIdx)
 
     return compressedTimestampsContainer
@@ -98,8 +97,8 @@ export class TimestampsCompressor {
     let referenceTimeDurationInMs = 0
     let isNewSection = true
     sectionIdxs.push(0)
-    for( let i = 1; i < unixTimestampsInMs.length; i++ ) {
-      const timeDurationInMs = unixTimestampsInMs[i] - unixTimestampsInMs[i-1]
+    for(let i = 1; i < unixTimestampsInMs.length; i++) {
+      const timeDurationInMs = unixTimestampsInMs[i] - unixTimestampsInMs[i - 1]
       if (isNewSection) {
         referenceTimeDurationInMs = timeDurationInMs
         isNewSection = false

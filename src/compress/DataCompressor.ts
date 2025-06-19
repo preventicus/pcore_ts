@@ -31,12 +31,12 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 */
 
-import {Data} from "@/models/Data"
-import {DataPb} from "@/ProtobufDefinitions"
-import {MetadataCompressor} from "@/compress/MetadataCompressor"
-import {TimestampsCompressor} from "@/compress/TimestampsCompressor"
-import {SensorCompressor} from "@/compress/SensorCompressor"
-import {InvalidDataException} from "@/Exception"
+import { Data } from "@/models/Data"
+import { DataPb } from "@/ProtobufDefinitions"
+import { MetadataCompressor } from "@/compress/MetadataCompressor"
+import { TimestampsCompressor } from "@/compress/TimestampsCompressor"
+import { SensorCompressor } from "@/compress/SensorCompressor"
+import { InvalidDataException } from "@/Exception"
 
 /**
  * Provides functionality to compress full `Data` objects, including metadata,
@@ -44,7 +44,6 @@ import {InvalidDataException} from "@/Exception"
  * before compression.
  */
 export class DataCompressor {
-
   /**
    * Compresses a complete `Data` object into a `DataPb` object suitable for efficient
    * transmission or storage.
@@ -68,7 +67,7 @@ export class DataCompressor {
       dataPb.compressedTimestampsContainer = TimestampsCompressor.compress(data.timestamps)
     }
 
-    data.sensors.forEach( sensor => {
+    data.sensors.forEach(sensor => {
       dataPb.sensors.push(SensorCompressor.compress(sensor))
     })
 
@@ -83,21 +82,20 @@ export class DataCompressor {
    * @throws {InvalidDataException} If the data violates required structural constraints.
    */
   private static validate(data: Data) {
-
     // case  data.timestamps.length === 0 && data.sensors.length === 0
     // means data are empty, every thing is fine.
 
-    if ( data.timestamps.length === 0 && data.sensors.length !== 0 ) {
+    if (data.timestamps.length === 0 && data.sensors.length !== 0) {
       throw new InvalidDataException("DataCompressor.validate", "Data must hold unix timestamps if it has sensor data")
     }
 
-    if ( data.timestamps.length !== 0  && data.sensors.length === 0 ) {
+    if (data.timestamps.length !== 0 && data.sensors.length === 0) {
       throw new InvalidDataException("DataCompressor.validate", "Data must have sensor data if it holds unix timestamps")
     }
 
     if (data.timestamps.length !== 0 && data.sensors.length !== 0) {
       const numberOfUnixTimestamps = data.timestamps.length
-      data.sensors.forEach( sensor => {
+      data.sensors.forEach(sensor => {
         switch (sensor.values.oneofKind) {
             case "intValuesContainer": {
               const values = sensor.values.intValuesContainer.values

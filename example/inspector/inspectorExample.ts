@@ -31,12 +31,11 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 */
 
-import {data} from "../ExampleData"
-import {Inspector} from "../../tools/inspector/Inspector"
-import {DataCompressor} from "../../src/compress/DataCompressor"
+import { data } from "../ExampleData"
+import { Inspector } from "../../tools/inspector/Inspector"
+import { DataCompressor } from "../../src/compress/DataCompressor"
 
 function main() {
-
   const dataPb = DataCompressor.compress(data)
 
   /* eslint-disable no-console */

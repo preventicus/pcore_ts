@@ -31,15 +31,14 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 */
 
-import {Metadata, Sensor} from "@/ProtobufDefinitions"
-import {UnixTimestamps} from "@/models/UnixTimestamp"
-import {Data} from "@/models/Data"
+import { Metadata, Sensor } from "@/ProtobufDefinitions"
+import { UnixTimestamps } from "@/models/UnixTimestamp"
+import { Data } from "@/models/Data"
 
 /**
  * A builder class for constructing a Data object step-by-step.
  */
 export class DataBuilder {
-
   private timestamps: UnixTimestamps = []
   private metadata?: Metadata
   private sensors: Sensor[] = []

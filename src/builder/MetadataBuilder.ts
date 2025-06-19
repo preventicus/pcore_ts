@@ -31,14 +31,13 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 */
 
-import {Device, Metadata, Version} from "@/ProtobufDefinitions"
-import {PcoreVersion} from "@generated/pcoreVersion"
+import { Device, Metadata, Version } from "@/ProtobufDefinitions"
+import { PcoreVersion } from "@generated/pcoreVersion"
 
 /**
  * A builder class to create and configure a Metadata object.
  */
 export class MetadataBuilder {
-
   private readonly metadata: Metadata
   private readonly device: Device
   private readonly deviceFirmwareVersion: Version

@@ -31,14 +31,13 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 */
 
-import {Sensor} from "@/ProtobufDefinitions"
+import { Sensor } from "@/ProtobufDefinitions"
 
 /**
  * Provides functionality to decompress sensor data.
  * Reconstructs original values from delta-encoded integer sequences or clones raw floating-point data.
  */
 export class SensorDecompressor {
-
   /**
    * Decompresses a `Sensor` object from its compressed protobuf form.
    *
@@ -49,13 +48,11 @@ export class SensorDecompressor {
    * @returns A fully decompressed `Sensor` object.
    */
   static decompress(sensorPb: Sensor): Sensor {
-
     const sensor = Sensor.create()
-    sensor.type   = structuredClone(sensorPb.type)
+    sensor.type = structuredClone(sensorPb.type)
 
     switch (sensorPb.values.oneofKind) {
         case "intValuesContainer": {
-
           const valuesPb = sensorPb.values.intValuesContainer.values
           const sizeValuesPb = valuesPb.length
 

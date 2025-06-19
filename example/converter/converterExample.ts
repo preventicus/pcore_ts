@@ -31,13 +31,12 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 */
 
-import {DataCompressor} from "../../src/compress/DataCompressor"
-import {Converter} from "../../tools/converter/Converter"
-import {DataForm} from "../../tools/converter/DataForm"
-import {data} from "../ExampleData"
+import { DataCompressor } from "../../src/compress/DataCompressor"
+import { Converter } from "../../tools/converter/Converter"
+import { DataForm } from "../../tools/converter/DataForm"
+import { data } from "../ExampleData"
 
 function main() {
-
   const dataPb = DataCompressor.compress(data)
 
   const decompressedJson = Converter.convertToJson(dataPb, DataForm.Decompressed)

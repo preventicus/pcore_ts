@@ -31,9 +31,9 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 */
 
-import {UnixTimestamps} from "@/models/UnixTimestamp"
-import {Metadata} from "@/ProtobufDefinitions"
-import {Sensor} from "@/ProtobufDefinitions"
+import { UnixTimestamps } from "@/models/UnixTimestamp"
+import { Metadata } from "@/ProtobufDefinitions"
+import { Sensor } from "@/ProtobufDefinitions"
 
 /**
  * Represents a complete data packet containing optional metadata,

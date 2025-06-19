@@ -31,20 +31,19 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 */
 
-import {DataPb} from "@/ProtobufDefinitions"
-import {UnixTimestamp} from "@/models/UnixTimestamp"
+import { DataPb } from "@/ProtobufDefinitions"
+import { UnixTimestamp } from "@/models/UnixTimestamp"
 
 /**
  * Utility class for inspecting compressed data without full decompression.
  */
 export class Inspector {
-
   /**
    * Returns the first Unix timestamp in the compressed data.
    * @param dataPb Compressed data protobuf object
    * @returns First Unix timestamp in milliseconds, or 0 if not present
    */
-  static getFirstUnixTimestamp( dataPb: DataPb): UnixTimestamp {
+  static getFirstUnixTimestamp(dataPb: DataPb): UnixTimestamp {
     if (dataPb.compressedTimestampsContainer === undefined) {
       return 0
     }
@@ -68,7 +67,7 @@ export class Inspector {
     }
 
     const size = compressedTimestampsContainer.innerSectionsDurationsMs.length
-    lastUnixTimestamp += compressedTimestampsContainer.innerSectionsDurationsMs[size-1] * (compressedTimestampsContainer.sectionsSizes[size-1] - 1)
+    lastUnixTimestamp += compressedTimestampsContainer.innerSectionsDurationsMs[size - 1] * (compressedTimestampsContainer.sectionsSizes[size - 1] - 1)
     return lastUnixTimestamp
   }
 
@@ -77,7 +76,7 @@ export class Inspector {
    * @param dataPb Compressed data protobuf object
    * @returns Number of timestamp sections
    */
-  static getNumberOfSections( dataPb: DataPb ): number {
+  static getNumberOfSections(dataPb: DataPb): number {
     if (dataPb.compressedTimestampsContainer === undefined) {
       return 0
     }

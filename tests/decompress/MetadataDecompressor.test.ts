@@ -31,20 +31,18 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 */
 
-import {MetadataBuilder} from "../../src/builder/MetadataBuilder"
-import {PcoreVersion} from "../../generated/pcore/pcoreVersion"
-import {MetadataDecompressor} from "../../src/decompress/MetadataDecompressor"
+import { MetadataBuilder } from "../../src/builder/MetadataBuilder"
+import { PcoreVersion } from "../../generated/pcore/pcoreVersion"
+import { MetadataDecompressor } from "../../src/decompress/MetadataDecompressor"
 
 describe("MetadataDecompressorTest", () => {
-
   test("test", () => {
-
     const metaData = new MetadataBuilder()
       .withTimezoneOffset(400)
       .withDeviceId("123")
       .withDeviceName("ABC")
       .withDeviceManufacturer("XYZ")
-      .withDeviceFirmwareVersion(3,4,1)
+      .withDeviceFirmwareVersion(3, 4, 1)
       .build()
 
     const decompressed = MetadataDecompressor.decompress(metaData)
@@ -81,5 +79,4 @@ describe("MetadataDecompressorTest", () => {
       "TimezoneOffset must be between -720 and 840"
     )
   })
-
 })

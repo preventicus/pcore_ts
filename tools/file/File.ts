@@ -31,14 +31,13 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 */
 
-import {DataPb} from "../../src/ProtobufDefinitions"
+import { DataPb } from "../../src/ProtobufDefinitions"
 import * as fs from "node:fs"
 
 /**
  * Utility class for reading and writing Pcore data in binary and JSON formats.
  */
 export class File {
-
   /**
    * Writes a DataPb object to disk as a Pcore binary file.
    * @param dataPb The DataPb object to write
@@ -76,5 +75,4 @@ export class File {
   static readPcoreJson(path: string): string {
     return fs.readFileSync(path, { encoding: "utf8" })
   }
-
 }

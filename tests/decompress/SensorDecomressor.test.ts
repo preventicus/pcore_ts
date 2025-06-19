@@ -31,13 +31,12 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 */
 
-import {getIntValues, getDoubleValues, getAccelerometerType, getPhotoplethysmographWavelength, getPhotoplethysmographColor, getElectrocardiogramChannel} from "../util/utils"
-import {SensorBuilder} from "../../src/builder/SensorBuilder"
-import {AccelerometerType, Color} from "../../src/ProtobufDefinitions"
-import {SensorDecompressor} from "../../src/decompress/SensorDecompressor"
+import { getIntValues, getDoubleValues, getAccelerometerType, getPhotoplethysmographWavelength, getPhotoplethysmographColor, getElectrocardiogramChannel } from "../util/utils"
+import { SensorBuilder } from "../../src/builder/SensorBuilder"
+import { AccelerometerType, Color } from "../../src/ProtobufDefinitions"
+import { SensorDecompressor } from "../../src/decompress/SensorDecompressor"
 
 describe("SensorDecompressor", () => {
-
   test("ACCTest", () => {
     const sensor = new SensorBuilder()
       .withIntValues([3, 1])
@@ -122,7 +121,6 @@ describe("SensorDecompressor", () => {
   })
 
   test("MaxValueTest", () => {
-
     const INT32_MAX = 2147483647 // 2^31 - 1
     const INT32_MIN = -2147483648 // -2^31
 
@@ -293,5 +291,4 @@ describe("SensorDecompressor", () => {
     expect(getIntValues(decompressed)!.length).toBe(72)
     expect(getIntValues(decompressed)).toEqual([87, 50, -21, 14, 50, -33, -38, 84, 77, -58, -50, 16, 45, 125, -29, -377, -485, -444, -323, -282, -473, -630, -942, -1377, -1102, -275, 14, -157, -198, -205, -343, -396, -84, 99, -280, -720, -1148, -1629, -1626, -1203, -333, 1039, 1401, 461, 7, 287, 241, -45, 89, 246, 41, -113, -116, -130, -99, 16, 91, -21, -333, -311, 149, 137, -217, -219, -171, -159, 36, 147, 123, 96, -224, -582])
   })
-
 })

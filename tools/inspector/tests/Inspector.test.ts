@@ -31,12 +31,11 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 */
 
-import {DataPb} from "../../../src/ProtobufDefinitions"
-import {Inspector} from "../Inspector"
-import {SensorBuilder} from "../../../src/builder/SensorBuilder"
+import { DataPb } from "../../../src/ProtobufDefinitions"
+import { Inspector } from "../Inspector"
+import { SensorBuilder } from "../../../src/builder/SensorBuilder"
 
 describe("InspectorTest", () => {
-
   test("GetFirstUnixTimestampEmptyTest", () => {
     const dataPb = DataPb.create()
     expect(Inspector.getFirstUnixTimestamp(dataPb)).toBe(0)

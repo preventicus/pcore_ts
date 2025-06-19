@@ -38,11 +38,11 @@ import {
   Metadata,
   Sensor
 } from "../../src/ProtobufDefinitions"
-import {DataCompressor} from "../../src/compress/DataCompressor"
-import {Data} from "@/models/Data"
-import {DataDecompressor} from "../../src/decompress/DataDecompressor"
-import {DataForm} from "./DataForm"
-import {UnixTimestamps} from "../../src/models/UnixTimestamp"
+import { DataCompressor } from "../../src/compress/DataCompressor"
+import { Data } from "@/models/Data"
+import { DataDecompressor } from "../../src/decompress/DataDecompressor"
+import { DataForm } from "./DataForm"
+import { UnixTimestamps } from "../../src/models/UnixTimestamp"
 
 interface DecompressedPhotoplethysmographWavelengthSensorJson {
     valuesType: string,
@@ -93,7 +93,6 @@ interface DecompressedPcoreJson {
  * compressed Protobuf data (DataPb) and a human-readable JSON format.
  */
 export class Converter {
-
   /**
      * Converts a protobuf data object to JSON.
      *
@@ -222,7 +221,6 @@ export class Converter {
      * @throws {Error} If the sensor type or value type is unsupported.
      */
   private static parseFromDecompressedSensor(sensor: any): Sensor { // eslint-disable-line @typescript-eslint/no-explicit-any
-
     const photoplethysmographColorMap: Record<string, Color> = {
       GREEN: Color.GREEN,
       RED: Color.RED,

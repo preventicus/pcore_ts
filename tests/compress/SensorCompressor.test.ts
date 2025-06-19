@@ -33,15 +33,13 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 import { SensorCompressor } from "../../src/compress/SensorCompressor"
 import { SensorBuilder } from "../../src/builder/SensorBuilder"
-import {AccelerometerType, Color} from "../../src/ProtobufDefinitions"
-import {getIntValues, getDoubleValues, getAccelerometerType, getPhotoplethysmographWavelength, getPhotoplethysmographColor, getElectrocardiogramChannel} from "../util/utils"
-
+import { AccelerometerType, Color } from "../../src/ProtobufDefinitions"
+import { getIntValues, getDoubleValues, getAccelerometerType, getPhotoplethysmographWavelength, getPhotoplethysmographColor, getElectrocardiogramChannel } from "../util/utils"
 
 describe("SensorCompressor", () => {
-
-  test("ACCTest" , () => {
+  test("ACCTest", () => {
     const sensor = new SensorBuilder()
-      .withIntValues([3,4])
+      .withIntValues([3, 4])
       .withAccelerometerType(AccelerometerType.X_COORDINATE)
       .build()
 
@@ -57,12 +55,12 @@ describe("SensorCompressor", () => {
     expect(compressed.values.oneofKind).not.toBe("doubleValuesContainer")
 
     expect(getIntValues(compressed)!.length).toBe(2)
-    expect(getIntValues(compressed)).toEqual([3,1])
+    expect(getIntValues(compressed)).toEqual([3, 1])
   })
 
-  test("PPGTestWavelength" , () => {
+  test("PPGTestWavelength", () => {
     const sensor = new SensorBuilder()
-      .withDoubleValues([3.1234,4.1234])
+      .withDoubleValues([3.1234, 4.1234])
       .withPhotoplethysmographWavelength(300)
       .build()
 
@@ -78,12 +76,12 @@ describe("SensorCompressor", () => {
     expect(compressed.values.oneofKind).toBe("doubleValuesContainer")
 
     expect(getDoubleValues(compressed)!.length).toBe(2)
-    expect(getDoubleValues(compressed)).toEqual([3.1234,4.1234])
+    expect(getDoubleValues(compressed)).toEqual([3.1234, 4.1234])
   })
 
-  test("PPGTestColor" , () => {
+  test("PPGTestColor", () => {
     const sensor = new SensorBuilder()
-      .withDoubleValues([3.123,4.123])
+      .withDoubleValues([3.123, 4.123])
       .withPhotoplethysmographColor(Color.RED)
       .build()
 
@@ -99,12 +97,12 @@ describe("SensorCompressor", () => {
     expect(compressed.values.oneofKind).toBe("doubleValuesContainer")
 
     expect(getDoubleValues(compressed)!.length).toBe(2)
-    expect(getDoubleValues(compressed)).toEqual([3.123,4.123])
+    expect(getDoubleValues(compressed)).toEqual([3.123, 4.123])
   })
 
-  test("ECGTest" , () => {
+  test("ECGTest", () => {
     const sensor = new SensorBuilder()
-      .withIntValues([100,200])
+      .withIntValues([100, 200])
       .withElectrocardiogramChannel(2)
       .build()
     const compressed = SensorCompressor.compress(sensor)
@@ -119,11 +117,10 @@ describe("SensorCompressor", () => {
     expect(compressed.values.oneofKind).not.toBe("doubleValuesContainer")
 
     expect(getIntValues(compressed)!.length).toBe(2)
-    expect(getIntValues(compressed)).toEqual([100,100])
+    expect(getIntValues(compressed)).toEqual([100, 100])
   })
 
   test("MaxValueTest", () => {
-
     const INT32_MAX = 2147483647 // 2^31 - 1
     const INT32_MIN = -2147483648 // -2^31
 
@@ -295,5 +292,4 @@ describe("SensorCompressor", () => {
     expect(getIntValues(compressed)!.length).toBe(72)
     expect(getIntValues(compressed)).toEqual([87, -37, -71, 35, 36, -83, -5, 122, -7, -135, 8, 66, 29, 80, -154, -348, -108, 41, 121, 41, -191, -157, -312, -435, 275, 827, 289, -171, -41, -7, -138, -53, 312, 183, -379, -440, -428, -481, 3, 423, 870, 1372, 362, -940, -454, 280, -46, -286, 134, 157, -205, -154, -3, -14, 31, 115, 75, -112, -312, 22, 460, -12, -354, -2, 48, 12, 195, 111, -24, -27, -320, -358])
   })
-
 })

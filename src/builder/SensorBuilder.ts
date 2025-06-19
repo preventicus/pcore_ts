@@ -31,7 +31,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 */
 
-import {Sensor, Color, AccelerometerType} from "@/ProtobufDefinitions"
+import { Sensor, Color, AccelerometerType } from "@/ProtobufDefinitions"
 
 /**
  * A builder class for constructing a Sensor object with different value types and sensor kinds.

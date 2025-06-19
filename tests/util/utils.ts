@@ -31,7 +31,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 */
 
-import {AccelerometerType, Color, Sensor} from "../../src/ProtobufDefinitions"
+import { AccelerometerType, Color, Sensor } from "../../src/ProtobufDefinitions"
 
 export function getIntValues(sensor: Sensor): number[] | undefined {
   if (sensor.values.oneofKind === "intValuesContainer") {

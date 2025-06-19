@@ -31,15 +31,14 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 */
 
-import {Metadata, Version} from "@/ProtobufDefinitions"
-import {WrongValueException} from "@/Exception"
-import {PcoreVersion} from "@generated/pcoreVersion"
+import { Metadata, Version } from "@/ProtobufDefinitions"
+import { WrongValueException } from "@/Exception"
+import { PcoreVersion } from "@generated/pcoreVersion"
 
 /**
  * Provides utilities to compress or sanitize metadata for transmission or storage.
  */
 export class MetadataCompressor {
-
   /**
    * Compresses a `Metadata` object by ensuring its `pcoreVersion` is set to the current version
    * and by validating the timezone offset.
@@ -51,7 +50,6 @@ export class MetadataCompressor {
    * @throws {WrongValueException} If the timezone offset is outside the valid range [-720, 840].
    */
   static compress(metadata?: Metadata): Metadata {
-
     if (metadata === undefined) {
       return Metadata.create({
         pcoreVersion: {
