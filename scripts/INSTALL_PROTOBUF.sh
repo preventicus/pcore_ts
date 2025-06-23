@@ -30,12 +30,13 @@
 # SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 set -euo pipefail
+pwd
 
 REPO_URL="https://github.com/preventicus/pcore.git"
 TMP_DIR="./tmp-pcore"
 PROTO_DIR="$TMP_DIR/protobuf_definitions"
 PROTO_FILE="pcore.proto"
-OUT_DIR="../generated/pcore"
+OUT_DIR="./generated/pcore"
 DEFAULT_VERSION="0.0.0"
 OUT_FILE="$OUT_DIR/pcoreVersion.ts"
 VERSION_FILE=".pcore-version"
@@ -66,6 +67,8 @@ cd - > /dev/null
 echo ">> Cleaning output directory..."
 rm -rf "$OUT_DIR"
 mkdir -p "$OUT_DIR"
+ls -ld "$OUT_DIR"
+echo "DEBUG: Absolut Path: $(readlink -f "$OUT_DIR")"
 
 echo ">> Compiling proto file with protobuf-ts..."
 PATH="./node_modules/.bin:$PATH" protoc \
