@@ -4,6 +4,8 @@
   "description": "Pcore TypeScript utilities for sensor data compression",
   "author": "Steve Merschel",
   "license": "BSD-3-Clause",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
   "scripts": {
     "generate:proto": "./scripts/INSTALL_PROTOBUF.sh",
     "build": "npm run generate:proto && npm run lint && npm run test && tsc",
@@ -13,7 +15,8 @@
     "lint:fix": "eslint 'src/**/*.ts' 'tools/**/*.ts' 'tests/**/*.ts' 'example/**/*.ts' --fix",
     "example:file": "ts-node -r tsconfig-paths/register example/file/fileExample.ts",
     "example:converter": "ts-node -r tsconfig-paths/register example/converter/converterExample.ts",
-    "example:inspector": "ts-node -r tsconfig-paths/register example/inspector/inspectorExample.ts"
+    "example:inspector": "ts-node -r tsconfig-paths/register example/inspector/inspectorExample.ts",
+    "prepare": "npm run build"
   },
   "devDependencies": {
     "@protobuf-ts/plugin": "^2.11.0",
