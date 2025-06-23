@@ -32,7 +32,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 */
 
 import { DataPb } from "../../../src/ProtobufDefinitions"
-import { Inspector } from "../Inspector"
+import { Inspector } from "../../../src/tools/inspector/Inspector"
 import { SensorBuilder } from "../../../src/builder/SensorBuilder"
 
 describe("InspectorTest", () => {

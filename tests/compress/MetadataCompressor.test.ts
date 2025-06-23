@@ -31,9 +31,9 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 */
 
-import { MetadataBuilder } from "../../src/builder/MetadataBuilder"
-import { PcoreVersion } from "../../generated/pcore/pcoreVersion"
-import { MetadataCompressor } from "../../src/compress/MetadataCompressor"
+import { MetadataBuilder } from "@/builder/MetadataBuilder"
+import { PcoreVersion } from "@generated/pcoreVersion"
+import { MetadataCompressor } from "@/compress/MetadataCompressor"
 
 describe("MetadataCompressorTest", () => {
   test("test", () => {

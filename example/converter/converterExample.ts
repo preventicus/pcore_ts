@@ -32,8 +32,8 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 */
 
 import { DataCompressor } from "../../src/compress/DataCompressor"
-import { Converter } from "../../tools/converter/Converter"
-import { DataForm } from "../../tools/converter/DataForm"
+import { Converter } from "../../src/tools/converter/Converter"
+import { DataForm } from "../../src/tools/converter/DataForm"
 import { data } from "../ExampleData"
 
 function main() {

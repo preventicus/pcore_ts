@@ -32,7 +32,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 */
 
 import { data } from "../ExampleData"
-import { Inspector } from "../../tools/inspector/Inspector"
+import { Inspector } from "../../src/tools/inspector/Inspector"
 import { DataCompressor } from "../../src/compress/DataCompressor"
 
 function main() {

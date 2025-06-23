@@ -31,9 +31,9 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 */
 
-import { TimestampsDecompressor } from "../../src/decompress/TimestampsDecompressor"
+import { TimestampsDecompressor } from "@/decompress/TimestampsDecompressor"
 import { CompressedTimestampsContainer } from "../../src/ProtobufDefinitions"
-import { UnixTimestamp } from "../../src/models/UnixTimestamp"
+import { UnixTimestamp } from "@/models/UnixTimestamp"
 
 function fillCompressedTimestampsContainerPb(fistUnixTimestamp: UnixTimestamp, innerSectionDurations: number[], outerSectionDurations: number[], sectionSizes: number[]): CompressedTimestampsContainer {
   const compressedTimestampsContainer = CompressedTimestampsContainer.create()

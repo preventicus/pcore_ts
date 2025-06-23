@@ -32,13 +32,13 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 */
 
 import { AccelerometerType, Color, DataPb, Sensor } from "../../src/ProtobufDefinitions"
-import { DataBuilder } from "../../src/builder/DataBuilder"
-import { PcoreVersion } from "../../generated/pcore/pcoreVersion"
-import { SensorBuilder } from "../../src/builder/SensorBuilder"
-import { MetadataBuilder } from "../../src/builder/MetadataBuilder"
-import { getIntValues, getDoubleValues, getAccelerometerType, getPhotoplethysmographWavelength, getPhotoplethysmographColor, getElectrocardiogramChannel } from "../util/utils"
-import { DataDecompressor } from "../../src/decompress/DataDecompressor"
-import { Data } from "../../generated/pcore/pcore"
+import { DataBuilder } from "../../src"
+import { PcoreVersion } from "../../src/generated/pcore/pcoreVersion"
+import { SensorBuilder } from "../../src"
+import { MetadataBuilder } from "../../src"
+import { getIntValues, getDoubleValues, getAccelerometerType, getPhotoplethysmographWavelength, getPhotoplethysmographColor, getElectrocardiogramChannel } from "../../src/util/utils"
+import { DataDecompressor } from "../../src"
+import { Data } from "../../src/generated/pcore/pcore"
 
 describe("DataDecompressorTest", () => {
   test("EmptyWithoutDecompressorTest", () => {

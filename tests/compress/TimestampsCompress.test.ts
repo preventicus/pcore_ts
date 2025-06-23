@@ -31,7 +31,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 */
 
-import { TimestampsCompressor } from "../../src/compress/TimestampsCompressor"
+import { TimestampsCompressor } from "@/compress/TimestampsCompressor"
 
 describe("TimestampsCompressor", () => {
   test("ZeroTimestampTest", () => {

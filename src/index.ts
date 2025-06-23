@@ -43,7 +43,7 @@ export * from "./compress/DataCompressor"
 
 export * from "./decompress/DataDecompressor"
 
-export * from "./../tools/file/File"
-export * from "./../tools/inspector/Inspector"
-export * from "./../tools/converter/Converter"
-export * from "./../tools/converter/DataForm"
+export * from "@/tools/file/File"
+export * from "@/tools/inspector/Inspector"
+export * from "@/tools/converter/Converter"
+export * from "@/tools/converter/DataForm"

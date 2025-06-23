@@ -33,7 +33,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 import { DataPb } from "../../src/ProtobufDefinitions"
 import { DataCompressor } from "../../src/compress/DataCompressor"
-import { File } from "../../tools/file/File"
+import { File } from "../../src/tools/file/File"
 import { DataDecompressor } from "../../src/decompress/DataDecompressor"
 import { data as dataWrite } from "../ExampleData"
 

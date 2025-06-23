@@ -31,10 +31,10 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 */
 
-import { getIntValues, getDoubleValues, getAccelerometerType, getPhotoplethysmographWavelength, getPhotoplethysmographColor, getElectrocardiogramChannel } from "../util/utils"
-import { SensorBuilder } from "../../src/builder/SensorBuilder"
+import { getIntValues, getDoubleValues, getAccelerometerType, getPhotoplethysmographWavelength, getPhotoplethysmographColor, getElectrocardiogramChannel } from "../../src/util/utils"
+import { SensorBuilder } from "@/builder/SensorBuilder"
 import { AccelerometerType, Color } from "../../src/ProtobufDefinitions"
-import { SensorDecompressor } from "../../src/decompress/SensorDecompressor"
+import { SensorDecompressor } from "@/decompress/SensorDecompressor"
 
 describe("SensorDecompressor", () => {
   test("ACCTest", () => {

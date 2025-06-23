@@ -31,7 +31,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 */
 
-import { DataPb } from "../../src/ProtobufDefinitions"
+import { DataPb } from "../../ProtobufDefinitions"
 import * as fs from "node:fs"
 
 /**

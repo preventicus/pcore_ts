@@ -37,12 +37,12 @@ import {
   DataPb,
   Metadata,
   Sensor
-} from "../../src/ProtobufDefinitions"
-import { DataCompressor } from "../../src/compress/DataCompressor"
+} from "../../ProtobufDefinitions"
+import { DataCompressor } from "../../compress/DataCompressor"
 import { Data } from "@/models/Data"
-import { DataDecompressor } from "../../src/decompress/DataDecompressor"
+import { DataDecompressor } from "../../decompress/DataDecompressor"
 import { DataForm } from "./DataForm"
-import { UnixTimestamps } from "../../src/models/UnixTimestamp"
+import { UnixTimestamps } from "../../models/UnixTimestamp"
 
 interface DecompressedPhotoplethysmographWavelengthSensorJson {
     valuesType: string,

@@ -32,12 +32,12 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 */
 
 import { AccelerometerType, Color, DataPb, Sensor } from "../../src/ProtobufDefinitions"
-import { DataCompressor } from "../../src/compress/DataCompressor"
-import { DataBuilder } from "../../src/builder/DataBuilder"
-import { PcoreVersion } from "../../generated/pcore/pcoreVersion"
-import { SensorBuilder } from "../../src/builder/SensorBuilder"
-import { MetadataBuilder } from "../../src/builder/MetadataBuilder"
-import { getIntValues, getDoubleValues, getAccelerometerType, getPhotoplethysmographWavelength, getPhotoplethysmographColor, getElectrocardiogramChannel } from "../util/utils"
+import { DataCompressor } from "../../src"
+import { DataBuilder } from "../../src"
+import { PcoreVersion } from "@generated/pcoreVersion"
+import { SensorBuilder } from "../../src"
+import { MetadataBuilder } from "../../src"
+import { getIntValues, getDoubleValues, getAccelerometerType, getPhotoplethysmographWavelength, getPhotoplethysmographColor, getElectrocardiogramChannel } from "../../src/util/utils"
 
 describe("DataCompressorTest", () => {
   test("EmptyWithoutCompressorTest", () => {
