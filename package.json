@@ -16,7 +16,7 @@
     "example:file": "ts-node -r tsconfig-paths/register example/file/fileExample.ts",
     "example:converter": "ts-node -r tsconfig-paths/register example/converter/converterExample.ts",
     "example:inspector": "ts-node -r tsconfig-paths/register example/inspector/inspectorExample.ts",
-    "prepare": "npm run build"
+    "postinstall": "npm run build"
   },
   "devDependencies": {
     "@protobuf-ts/plugin": "^2.11.0",
