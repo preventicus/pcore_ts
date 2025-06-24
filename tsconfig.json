@@ -6,18 +6,19 @@
     "esModuleInterop": true,
     "strict": true,
     "skipLibCheck": true,
-    "baseUrl": "src",
     "declaration": true,
     "declarationMap": false,
     "paths": {
-      "@/*": ["*"],
-      "@generated/*": ["generated/pcore/*"],
-      "@tools/*": ["tools/*"],
-      "@example/*": ["../example/*"]
+      "@/*": ["src/*"],
+      "@generated/*": ["src/generated/pcore/*"],
+      "@tools/*": ["src/tools/*"],
+      "@example/*": ["example/*"]
     },
     "outDir": "dist",
-    "rootDir": "src"
+    "rootDir": ".",
+    "baseUrl": ".",
+    "types": ["node"]
   },
-  "include": ["src"],
-  "exclude": ["node_modules", "dist"]
+  "include": ["src/**/*.ts"],
+  "exclude": ["node_modules", "dist", "tests"]
 }
