@@ -9,14 +9,14 @@
     "declaration": true,
     "declarationMap": false,
     "paths": {
-      "@/*": ["src/*"],
-      "@generated/*": ["src/generated/pcore/*"],
-      "@tools/*": ["src/tools/*"],
-      "@example/*": ["example/*"]
+      "@/*": ["*"],
+      "@generated/*": ["generated/pcore/*"],
+      "@tools/*": ["tools/*"],
+      "@example/*": ["../example/*"]
     },
     "outDir": "dist",
-    "rootDir": ".",
-    "baseUrl": ".",
+    "rootDir": "src",
+    "baseUrl": "src",
     "types": ["node"]
   },
   "include": ["src/**/*.ts"],
