@@ -16,7 +16,7 @@
     "example:file": "ts-node -r tsconfig-paths/register example/file/fileExample.ts",
     "example:converter": "ts-node -r tsconfig-paths/register example/converter/converterExample.ts",
     "example:inspector": "ts-node -r tsconfig-paths/register example/inspector/inspectorExample.ts",
-    "postinstall": "npm run generate:proto",
+    "prepack": "npm run generate:proto",
     "prepare": "npm run lint && npm run test && tsc && tsc-alias"
   },
   "devDependencies": {
