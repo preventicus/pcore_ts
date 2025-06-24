@@ -20,6 +20,6 @@
     "baseUrl": "src",
     "types": ["node"]
   },
-  "include": ["src/**/*.ts"],
+  "include": ["src/**/*.ts", "src/generated/pcore/*.ts"],
   "exclude": ["node_modules", "dist", "tests"]
 }
