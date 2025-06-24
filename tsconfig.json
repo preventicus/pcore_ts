@@ -10,7 +10,8 @@
     "declarationMap": false,
     "paths": {
       "@/*": ["*"],
-      "@generated/*": ["generated/pcore/*"],
+      "@generated/pcore": ["generated/pcore/pcore.ts"],
+      "@generated/pcoreVersion": ["generated/pcore/pcoreVersion.ts"],
       "@tools/*": ["tools/*"],
       "@example/*": ["../example/*"]
     },
