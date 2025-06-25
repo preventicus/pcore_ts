@@ -94,14 +94,19 @@ interface DecompressedPcoreJson {
  */
 export class Converter {
   /**
-     * Converts a protobuf data object to JSON.
-     *
-     * @param dataPb - The protobuf data object.
-     * @param dataForm - Indicates whether the data is compressed or decompressed.
-     * @returns The JSON string representation of the data.
-     * @throws {Error} Throws if internal parsing fails or unsupported sensor types are encountered.
-     */
-  static convertToJson(dataPb: DataPb, dataForm: DataForm): string {
+   * Converts a protobuf data object to a JSON string representation.
+   *
+   * Depending on the data form, this either returns the raw protobuf object
+   * as JSON (compressed), or a human-readable decompressed format.
+   *
+   * @param dataPb - The protobuf data object to be converted.
+   * @param dataForm - Indicates the format of the input data (compressed or decompressed).
+   * @param indent - Optional. Number of spaces to use for pretty-printing the output JSON.
+   *                 If set to 0 (default), the output will be minified.
+   * @returns A JSON string representing the protobuf data.
+   * @throws {Error} Throws if decompression or conversion fails, or if unsupported sensor types are encountered.
+   */
+  static convertToJson(dataPb: DataPb, dataForm: DataForm, indent: number = 0): string {
     switch (dataForm) {
         case DataForm.Compressed: {
           return JSON.stringify(dataPb)
@@ -113,7 +118,7 @@ export class Converter {
             timestamps: data.timestamps,
             sensors: data.sensors.map(Converter.parseToDecompressedSensor)
           }
-          return JSON.stringify(decompressedPcoreJson)
+          return JSON.stringify(decompressedPcoreJson, null, indent)
         }
     }
   }
