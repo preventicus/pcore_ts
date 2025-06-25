@@ -1,6 +1,5 @@
 
 .idea/
-generated/
 node_modules/
 coverage/
 dist/
