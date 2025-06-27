@@ -232,7 +232,7 @@ export class Converter {
       BLUE: Color.BLUE
     }
 
-    if (sensor.valuesType !== "intValuesContainer" || sensor.valuesType !== "doubleValuesContainer") {
+    if (sensor.valuesType !== "intValuesContainer" && sensor.valuesType !== "doubleValuesContainer") {
       throw new Error(`Unsupported sensor value type: ${sensor.valuesType}`)
     }
 
