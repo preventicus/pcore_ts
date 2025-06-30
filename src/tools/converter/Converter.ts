@@ -109,7 +109,7 @@ export class Converter {
   static convertToJson(dataPb: DataPb, dataForm: DataForm, indent: number = 0): string {
     switch (dataForm) {
         case DataForm.Compressed: {
-          return JSON.stringify(dataPb)
+          return JSON.stringify(dataPb, null, indent)
         }
         case DataForm.Decompressed: {
           const data = DataDecompressor.decompress(dataPb)
