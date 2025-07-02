@@ -94,15 +94,15 @@ export class Inspector {
       return 0
     }
     switch (dataPb.sensors[0].values.oneofKind) {
-        case "intValuesContainer": {
-          return dataPb.sensors[0].values.intValuesContainer.values.length
-        }
-        case "doubleValuesContainer": {
-          return dataPb.sensors[0].values.doubleValuesContainer.values.length
-        }
-        default: {
-          return 0
-        }
+      case "intValuesContainer": {
+        return dataPb.sensors[0].values.intValuesContainer.values.length
+      }
+      case "doubleValuesContainer": {
+        return dataPb.sensors[0].values.doubleValuesContainer.values.length
+      }
+      default: {
+        return 0
+      }
     }
   }
 }

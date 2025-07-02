@@ -108,18 +108,18 @@ export class Converter {
    */
   static convertToJson(dataPb: DataPb, dataForm: DataForm, indent: number = 0): string {
     switch (dataForm) {
-        case DataForm.Compressed: {
-          return JSON.stringify(dataPb, null, indent)
+      case DataForm.Compressed: {
+        return JSON.stringify(dataPb, null, indent)
+      }
+      case DataForm.Decompressed: {
+        const data = DataDecompressor.decompress(dataPb)
+        const decompressedPcoreJson: DecompressedPcoreJson = {
+          metadata: data.metadata,
+          timestamps: data.timestamps,
+          sensors: data.sensors.map(Converter.parseToDecompressedSensor)
         }
-        case DataForm.Decompressed: {
-          const data = DataDecompressor.decompress(dataPb)
-          const decompressedPcoreJson: DecompressedPcoreJson = {
-            metadata: data.metadata,
-            timestamps: data.timestamps,
-            sensors: data.sensors.map(Converter.parseToDecompressedSensor)
-          }
-          return JSON.stringify(decompressedPcoreJson, null, indent)
-        }
+        return JSON.stringify(decompressedPcoreJson, null, indent)
+      }
     }
   }
 
@@ -155,66 +155,66 @@ export class Converter {
   private static parseToDecompressedSensor(sensor: Sensor): DecompressedSensor {
     let values: number[] = []
     switch (sensor.values.oneofKind) {
-        case "intValuesContainer": {
-          values = sensor.values.intValuesContainer.values
-          break
-        }
-        case "doubleValuesContainer": {
-          values = sensor.values.doubleValuesContainer.values
-          break
-        }
-        default: {
-          throw new Error(`Unsupported sensor value type: ${sensor.values.oneofKind}`)
-        }
+      case "intValuesContainer": {
+        values = sensor.values.intValuesContainer.values
+        break
+      }
+      case "doubleValuesContainer": {
+        values = sensor.values.doubleValuesContainer.values
+        break
+      }
+      default: {
+        throw new Error(`Unsupported sensor value type: ${sensor.values.oneofKind}`)
+      }
     }
 
     switch (sensor.type.oneofKind) {
-        case "accelerometer": {
-          return {
-            valuesType: sensor.values.oneofKind,
-            values,
-            accelerometer: {
-              type: AccelerometerType[sensor.type.accelerometer.type]
-            }
-          } satisfies DecompressedAccelerometerSensorJson
-        }
-        case "photoplethysmograph": {
-          switch (sensor.type.photoplethysmograph.light.oneofKind) {
-              case "wavelengthNm": {
-                return {
-                  valuesType: sensor.values.oneofKind,
-                  values,
-                  photoplethysmograph: {
-                    wavelengthNm: sensor.type.photoplethysmograph.light.wavelengthNm,
-                  }
-                } satisfies DecompressedPhotoplethysmographWavelengthSensorJson
+      case "accelerometer": {
+        return {
+          valuesType: sensor.values.oneofKind,
+          values,
+          accelerometer: {
+            type: AccelerometerType[sensor.type.accelerometer.type]
+          }
+        } satisfies DecompressedAccelerometerSensorJson
+      }
+      case "photoplethysmograph": {
+        switch (sensor.type.photoplethysmograph.light.oneofKind) {
+          case "wavelengthNm": {
+            return {
+              valuesType: sensor.values.oneofKind,
+              values,
+              photoplethysmograph: {
+                wavelengthNm: sensor.type.photoplethysmograph.light.wavelengthNm,
               }
-              case "color": {
-                return {
-                  valuesType: sensor.values.oneofKind,
-                  values,
-                  photoplethysmograph: {
-                    color: Color[sensor.type.photoplethysmograph.light.color],
-                  }
-                } satisfies DecompressedPhotoplethysmographColorSensorJson
+            } satisfies DecompressedPhotoplethysmographWavelengthSensorJson
+          }
+          case "color": {
+            return {
+              valuesType: sensor.values.oneofKind,
+              values,
+              photoplethysmograph: {
+                color: Color[sensor.type.photoplethysmograph.light.color],
               }
-              default: {
-                throw new Error(`Unsupported sensor photoplethysmograph type: ${sensor.type.photoplethysmograph.light.oneofKind}`)
-              }
+            } satisfies DecompressedPhotoplethysmographColorSensorJson
+          }
+          default: {
+            throw new Error(`Unsupported sensor photoplethysmograph type: ${sensor.type.photoplethysmograph.light.oneofKind}`)
           }
         }
-        case "electrocardiogram": {
-          return {
-            valuesType: sensor.values.oneofKind,
-            values,
-            electrocardiogram: {
-              channel: sensor.type.electrocardiogram.channel
-            }
-          } satisfies DecompressedElectrocardiogramSensorJson
-        }
-        default: {
-          throw new Error(`Unsupported sensor type: ${sensor.type.oneofKind}`)
-        }
+      }
+      case "electrocardiogram": {
+        return {
+          valuesType: sensor.values.oneofKind,
+          values,
+          electrocardiogram: {
+            channel: sensor.type.electrocardiogram.channel
+          }
+        } satisfies DecompressedElectrocardiogramSensorJson
+      }
+      default: {
+        throw new Error(`Unsupported sensor type: ${sensor.type.oneofKind}`)
+      }
     }
   }
 

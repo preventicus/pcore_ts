@@ -97,20 +97,20 @@ export class DataCompressor {
       const numberOfUnixTimestamps = data.timestamps.length
       data.sensors.forEach(sensor => {
         switch (sensor.values.oneofKind) {
-            case "intValuesContainer": {
-              const values = sensor.values.intValuesContainer.values
-              if (values.length !== numberOfUnixTimestamps) {
-                throw new InvalidDataException("DataCompressor.validate", "Number of unix timestamps should be equal to the number of data points")
-              }
-              break
+          case "intValuesContainer": {
+            const values = sensor.values.intValuesContainer.values
+            if (values.length !== numberOfUnixTimestamps) {
+              throw new InvalidDataException("DataCompressor.validate", "Number of unix timestamps should be equal to the number of data points")
             }
-            case "doubleValuesContainer": {
-              const values = sensor.values.doubleValuesContainer.values
-              if (values.length !== numberOfUnixTimestamps) {
-                throw new InvalidDataException("DataCompressor::validate", "Number of unix timestamps should be equal to the number of data points")
-              }
-              break
+            break
+          }
+          case "doubleValuesContainer": {
+            const values = sensor.values.doubleValuesContainer.values
+            if (values.length !== numberOfUnixTimestamps) {
+              throw new InvalidDataException("DataCompressor::validate", "Number of unix timestamps should be equal to the number of data points")
             }
+            break
+          }
         }
       })
     }
