@@ -43,6 +43,7 @@ import { Data } from "@/models/Data"
 import { DataDecompressor } from "../../decompress/DataDecompressor"
 import { DataForm } from "./DataForm"
 import { UnixTimestamps } from "../../models/UnixTimestamp"
+import { Inspector } from "@tools/inspector/Inspector"
 
 interface DecompressedPhotoplethysmographWavelengthSensorJson {
     valuesType: string,
@@ -109,10 +110,11 @@ export class Converter {
   static convertToJson(dataPb: DataPb, dataForm: DataForm, indent: number = 0): string {
     switch (dataForm) {
       case DataForm.Compressed: {
+        Inspector.validateCompressed(dataPb)
         return JSON.stringify(dataPb, null, indent)
       }
       case DataForm.Decompressed: {
-        const data = DataDecompressor.decompress(dataPb)
+        const data = DataDecompressor.decompress(dataPb) // validation is done in decompress method
         const decompressedPcoreJson: DecompressedPcoreJson = {
           metadata: data.metadata,
           timestamps: data.timestamps,
@@ -134,7 +136,9 @@ export class Converter {
   static convertFromJson(json: string): DataPb {
     const parsedJson = JSON.parse(json)
     if ("compressedTimestampsContainer" in parsedJson) {
-      return parsedJson as DataPb
+      const dataPb = parsedJson as DataPb
+      Inspector.validateCompressed(dataPb)
+      return dataPb
     }
     const decompressedPcoreJson = parsedJson as DecompressedPcoreJson
     const data: Data = {
@@ -142,7 +146,7 @@ export class Converter {
       timestamps: decompressedPcoreJson.timestamps,
       sensors: decompressedPcoreJson.sensors.map(Converter.parseFromDecompressedSensor)
     }
-    return DataCompressor.compress(data)
+    return DataCompressor.compress(data) // validation is done in compress method
   }
 
   /**
