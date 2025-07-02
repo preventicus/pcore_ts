@@ -33,6 +33,8 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 import { DataPb } from "@/ProtobufDefinitions"
 import { UnixTimestamp } from "@/models/UnixTimestamp"
+import { Data } from "@/models/Data"
+import { InvalidDataException } from "@/Exception"
 
 /**
  * Utility class for inspecting compressed data without full decompression.
@@ -103,6 +105,128 @@ export class Inspector {
       default: {
         return 0
       }
+    }
+  }
+
+  /**
+   * Validates the consistency of the given `Data` object.
+   * Ensures that sensor data and timestamps are aligned and both are present or absent together.
+   *
+   * @param data - The `Data` object to validate.
+   * @throws {InvalidDataException} If the data violates required structural constraints.
+   */
+  static validateDecompressed(data: Data) {
+    // case  data.timestamps.length === 0 && data.sensors.length === 0
+    // means data are empty, every thing is fine.
+
+    if (data.timestamps.length === 0 && data.sensors.length !== 0) {
+      throw new InvalidDataException("Inspector.validate", "Data must hold unix timestamps if it has sensor data")
+    }
+
+    if (data.timestamps.length !== 0 && data.sensors.length === 0) {
+      throw new InvalidDataException("Inspector.validate", "Data must have sensor data if it holds unix timestamps")
+    }
+
+    if (data.timestamps.length !== 0 && data.sensors.length !== 0) {
+      const numberOfUnixTimestamps = data.timestamps.length
+      data.sensors.forEach(sensor => {
+        switch (sensor.values.oneofKind) {
+          case "intValuesContainer": {
+            const values = sensor.values.intValuesContainer.values
+            if (values.length !== numberOfUnixTimestamps) {
+              throw new InvalidDataException("Inspector.validate", "Number of unix timestamps should be equal to the number of data points")
+            }
+            break
+          }
+          case "doubleValuesContainer": {
+            const values = sensor.values.doubleValuesContainer.values
+            if (values.length !== numberOfUnixTimestamps) {
+              throw new InvalidDataException("Inspector::validate", "Number of unix timestamps should be equal to the number of data points")
+            }
+            break
+          }
+        }
+      })
+    }
+  }
+
+  /**
+   * Validates the internal consistency of the given compressed data object.
+   * Ensures that section sizes and durations are structurally valid and match sensor lengths.
+   *
+   * @param dataPb - The `DataPb` object to validate.
+   * @throws {InvalidDataException} If the compressed structure or metadata violates integrity rules.
+   */
+  static validateCompressed(dataPb: DataPb) {
+    if (dataPb.compressedTimestampsContainer !== undefined && dataPb.sensors.length === 0) {
+      throw new InvalidDataException("Inspector.validate", "Data must have sensor data if it holds compressed timestamps")
+    }
+
+    if (dataPb.compressedTimestampsContainer === undefined && dataPb.sensors.length !== 0) {
+      throw new InvalidDataException("Inspector.validate", "Data must hold compressed timestamps if it has sensor data")
+    }
+
+    if (dataPb.compressedTimestampsContainer !== undefined && dataPb.sensors.length !== 0) {
+      const outerSectionsDurations = dataPb.compressedTimestampsContainer.outerSectionsDurationsMs
+      const innerSectionsDurations = dataPb.compressedTimestampsContainer.innerSectionsDurationsMs
+      const sectionsSizes = dataPb.compressedTimestampsContainer.sectionsSizes
+
+      const sizeOuter = outerSectionsDurations.length
+      const sizeInner = innerSectionsDurations.length
+      const sizeSizes = sectionsSizes.length
+
+      if (sizeOuter !== sizeInner || sizeInner !== sizeSizes) {
+        throw new InvalidDataException("Inspector.validate", "Vectors in compressed_timestamps_container must have the same length")
+      }
+
+      if (sizeSizes === 0) {
+        return
+      }
+
+      if (outerSectionsDurations[0] !== 0) {
+        throw new InvalidDataException("Inspector.validate", "First value in outer_sections_durations_ms must always be 0")
+      }
+      for (let i = 1; i < sizeSizes; i++) {
+        if (outerSectionsDurations[i] === 0) {
+          throw new InvalidDataException("Inspector.validate", "Any value in outer_sections_durations_ms in pos >= 1 can not be 0")
+        }
+      }
+
+      for (let i = 0; i < sizeSizes - 1; i++) {
+        if (innerSectionsDurations[i] === 0) {
+          throw new InvalidDataException("Inspector.validate", "Any except the last value in inner_sections_durations_ms can not be 0")
+        }
+      }
+
+      for (let i = 0; i < sizeSizes; i++) {
+        if (sectionsSizes[i] === 0) {
+          throw new InvalidDataException("Inspector.validate", "Any value in sections_sizes can not be 0")
+        }
+      }
+
+      let numberOfUnixTimestamps = 0
+      for (let i = 0; i < sectionsSizes.length; i++) {
+        numberOfUnixTimestamps += sectionsSizes[i]
+      }
+
+      if (numberOfUnixTimestamps === 1) {
+        if (innerSectionsDurations[0] !== 0) {
+          throw new InvalidDataException("Inspector.validate", "inner_sections_durations_ms must equal to 0 if only one unix timestamp is set")
+        }
+      }
+
+      dataPb.sensors.forEach(sensorPb => {
+        if (sensorPb.values.oneofKind === "doubleValuesContainer") {
+          if (sensorPb.values.doubleValuesContainer.values.length !== numberOfUnixTimestamps) {
+            throw new InvalidDataException("Inspector.validate", "Sensor data must have the same length as unix timestamps")
+          }
+        }
+        if (sensorPb.values.oneofKind === "intValuesContainer") {
+          if (sensorPb.values.intValuesContainer.values.length !== numberOfUnixTimestamps) {
+            throw new InvalidDataException("Inspector.validate", "Sensor data must have the same length as unix timestamps")
+          }
+        }
+      })
     }
   }
 }

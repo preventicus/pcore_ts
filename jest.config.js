@@ -14,7 +14,8 @@ module.exports = {
     },
     moduleNameMapper: {
         "^@/(.*)$": "<rootDir>/src/$1",
-        "^@generated/(.*)$": "<rootDir>/src/generated/pcore/$1"
+        "^@generated/(.*)$": "<rootDir>/src/generated/pcore/$1",
+        "^@tools/(.*)$": "<rootDir>/src/tools/$1"
     },
     testMatch: [
         "<rootDir>/tests/**/*.test.ts",
