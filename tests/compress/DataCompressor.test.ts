@@ -94,6 +94,22 @@ describe("DataCompressorTest", () => {
     )
   })
 
+  test("NegativeTimestampTest", () => {
+    const sensor = new SensorBuilder()
+      .withIntValues([1, 2, 3, 4, 5])
+      .withElectrocardiogramChannel(1)
+      .build()
+
+    const data = new DataBuilder()
+      .withTimestamps([-1, 2, 3, 4, 5])
+      .withSensor(sensor)
+      .build()
+
+    expect(() => DataCompressor.compress(data)).toThrow(
+      "Timestamp should be positive or 0"
+    )
+  })
+
   test("MissingUnixTimestampsTest", () => {
     const sensor = new SensorBuilder()
       .withIntValues([0, 3, 1, 3, 2])

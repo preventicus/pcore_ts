@@ -137,6 +137,12 @@ export class Inspector {
         }
       }
 
+      timestamps.forEach(timestamp => {
+        if (timestamp < 0) {
+          throw new InvalidDataException("Inspector.validate", "Timestamp should be positive or 0")
+        }
+      })
+
       data.sensors.forEach(sensor => {
         switch (sensor.values.oneofKind) {
           case "intValuesContainer": {
@@ -195,20 +201,24 @@ export class Inspector {
         throw new InvalidDataException("Inspector.validate", "First value in outer_sections_durations_ms must always be 0")
       }
       for (let i = 1; i < sizeSizes; i++) {
-        if (outerSectionsDurations[i] === 0) {
-          throw new InvalidDataException("Inspector.validate", "Any value in outer_sections_durations_ms in pos >= 1 can not be 0")
+        if (outerSectionsDurations[i] <= 0) {
+          throw new InvalidDataException("Inspector.validate", "Any value in outer_sections_durations_ms in pos >= 1 can not be 0 or negative")
         }
       }
 
       for (let i = 0; i < sizeSizes - 1; i++) {
-        if (innerSectionsDurations[i] === 0) {
-          throw new InvalidDataException("Inspector.validate", "Any except the last value in inner_sections_durations_ms can not be 0")
+        if (innerSectionsDurations[i] <= 0) {
+          throw new InvalidDataException("Inspector.validate", "Any except the last value in inner_sections_durations_ms can not be 0 or negative")
         }
       }
 
+      if (innerSectionsDurations[sizeInner - 1] < 0) {
+        throw new InvalidDataException("Inspector.validate", "Last value in inner_sections_durations_ms must be positive or 0")
+      }
+
       for (let i = 0; i < sizeSizes; i++) {
-        if (sectionsSizes[i] === 0) {
-          throw new InvalidDataException("Inspector.validate", "Any value in sections_sizes can not be 0")
+        if (sectionsSizes[i] <= 0) {
+          throw new InvalidDataException("Inspector.validate", "Any value in sections_sizes can not be 0 or negative")
         }
       }
 
