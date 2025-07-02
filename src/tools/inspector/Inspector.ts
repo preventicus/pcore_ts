@@ -128,7 +128,15 @@ export class Inspector {
     }
 
     if (data.timestamps.length !== 0 && data.sensors.length !== 0) {
-      const numberOfUnixTimestamps = data.timestamps.length
+      const timestamps = data.timestamps
+      const numberOfUnixTimestamps = timestamps.length
+
+      for (let i = 1; i < numberOfUnixTimestamps; i++) {
+        if (timestamps[i] - timestamps[i - 1] <= 0) {
+          throw new InvalidDataException("Inspector.validate", "Timestamp should be strictly monotonically increasing")
+        }
+      }
+
       data.sensors.forEach(sensor => {
         switch (sensor.values.oneofKind) {
           case "intValuesContainer": {
