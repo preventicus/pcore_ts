@@ -32,8 +32,8 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 */
 
 import { data } from "../ExampleData"
-import { Inspector } from "../../src/tools/inspector/Inspector"
-import { DataCompressor } from "../../src/compress/DataCompressor"
+import { Inspector } from "@tools/inspector/Inspector"
+import { DataCompressor } from "@/compress/DataCompressor"
 
 function main() {
   const dataPb = DataCompressor.compress(data)
@@ -43,6 +43,7 @@ function main() {
   console.log("Number of Sections: " + Inspector.getNumberOfSections(dataPb))
   console.log("First Unix Timestamp: " + Inspector.getFirstUnixTimestamp(dataPb))
   console.log("Last Unix Timestamp: " + Inspector.getLastUnixTimestamp(dataPb))
+  console.log("Containing sensors: " + JSON.stringify(Inspector.getSensorTypes(dataPb)))
   /* eslint-disable no-console */
 }
 

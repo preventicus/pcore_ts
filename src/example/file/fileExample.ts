@@ -31,32 +31,51 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 */
 
-import { DataCompressor } from "../../src/compress/DataCompressor"
-import { Converter } from "../../src/tools/converter/Converter"
-import { DataForm } from "../../src/tools/converter/DataForm"
-import { data } from "../ExampleData"
+import { DataPb } from "../../ProtobufDefinitions"
+import { DataCompressor } from "@/compress/DataCompressor"
+import { File } from "@tools/file/File"
+import { data as dataWrite } from "../ExampleData"
+import { Converter } from "@tools/converter/Converter"
+import { DataForm } from "@tools/converter/DataForm"
 
 function main() {
-  const dataPb = DataCompressor.compress(data)
+  /*
+   * Writing Binary
+   */
+  const dataWritePb = DataCompressor.compress(dataWrite)
 
-  const decompressedJson = Converter.convertToJson(dataPb, DataForm.Decompressed)
-  const compressedJson = Converter.convertToJson(dataPb, DataForm.Compressed)
+  try {
+    File.writePcoreBinary(dataWritePb, __dirname + "/dataWrite.pcore")
+  } catch (e) {
+    // eslint-disable-next-line no-console
+    console.error("Error when writing the file: ", e)
+  }
+
+  /*
+   * Reading Binary
+   */
+
+  let dataReadPb: DataPb | undefined
+
+  try {
+    dataReadPb = File.readPcoreBinary(__dirname + "/dataWrite.pcore")
+  } catch (e) {
+    // eslint-disable-next-line no-console
+    console.error("Error when reading the file: ", e)
+    return
+  }
+
+  if (dataReadPb === undefined) {
+    // eslint-disable-next-line no-console
+    console.error("Error when reading the file:")
+    return
+  }
+
+  const jsonRead = Converter.convertToJson(dataReadPb, DataForm.Decompressed, 2)
 
   /* eslint-disable no-console */
-  console.log(decompressedJson)
-  console.log("\n")
-  console.log(compressedJson)
+  console.log(jsonRead)
   /* eslint-enable no-console */
-
-  const dataPbConvertedFromDecompressedJson = Converter.convertFromJson(decompressedJson)
-  const dataPbConvertedFromCompressedJson = Converter.convertFromJson(compressedJson)
-
-  /* eslint-disable no-console */
-  console.log("\n")
-  console.log(JSON.stringify(dataPbConvertedFromDecompressedJson))
-  console.log("\n")
-  console.log(JSON.stringify(dataPbConvertedFromCompressedJson))
-  /* eslint-disable no-console */
 }
 
 main()

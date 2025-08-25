@@ -11,11 +11,11 @@
     "build": "npm run generate:proto && npm run lint && npm run test && tsc && tsc-alias",
     "test": "jest",
     "test:coverage": "jest --coverage",
-    "lint": "eslint 'src/**/*.ts' 'src/tools/**/*.ts' 'tests/**/*.ts' 'example/**/*.ts'",
-    "lint:fix": "eslint 'src/**/*.ts' 'src/tools/**/*.ts' 'tests/**/*.ts' 'example/**/*.ts' --fix",
-    "example:file": "ts-node -r tsconfig-paths/register example/file/fileExample.ts",
-    "example:converter": "ts-node -r tsconfig-paths/register example/converter/converterExample.ts",
-    "example:inspector": "ts-node -r tsconfig-paths/register example/inspector/inspectorExample.ts",
+    "lint": "eslint 'src/**/*.ts' 'src/tools/**/*.ts' 'tests/**/*.ts' 'src/example/**/*.ts'",
+    "lint:fix": "eslint 'src/**/*.ts' 'src/tools/**/*.ts' 'tests/**/*.ts' 'src/example/**/*.ts' --fix",
+    "example:file": "ts-node -r tsconfig-paths/register src/example/file/fileExample.ts",
+    "example:converter": "ts-node -r tsconfig-paths/register src/example/converter/converterExample.ts",
+    "example:inspector": "ts-node -r tsconfig-paths/register src/example/inspector/inspectorExample.ts",
     "prepare": "npm run lint && npm run test && tsc && tsc-alias"
   },
   "devDependencies": {

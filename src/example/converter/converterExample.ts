@@ -31,47 +31,32 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 */
 
-import { MetadataBuilder } from "../src/builder/MetadataBuilder"
-import { AccelerometerType, Color, Sensor } from "../src/ProtobufDefinitions"
-import { SensorBuilder } from "../src/builder/SensorBuilder"
-import { DataBuilder } from "../src/builder/DataBuilder"
+import { DataCompressor } from "@/compress/DataCompressor"
+import { Converter } from "@tools/converter/Converter"
+import { DataForm } from "@tools/converter/DataForm"
+import { data } from "../ExampleData"
 
-const metadata = new MetadataBuilder()
-  .withTimezoneOffset(300)
-  .withDeviceName("deviceName")
-  .withDeviceManufacturer("deviceManufacturer")
-  .withDeviceId("A123GBH")
-  .withDeviceFirmwareVersion(1, 3, 2)
-  .build()
+function main() {
+  const dataPb = DataCompressor.compress(data)
 
-const sensors: Sensor[] = []
+  const decompressedJson = Converter.convertToJson(dataPb, DataForm.Decompressed)
+  const compressedJson = Converter.convertToJson(dataPb, DataForm.Compressed)
 
-sensors.push(new SensorBuilder()
-  .withPhotoplethysmographWavelength(400)
-  .withIntValues([1, 2, 3, 4, 5, 6, 7, 8, 9, -1, -2, -3, -4, -5, -6, -7, -8, -9])
-  .build()
-)
+  /* eslint-disable no-console */
+  console.log(decompressedJson)
+  console.log("\n")
+  console.log(compressedJson)
+  /* eslint-enable no-console */
 
-sensors.push(new SensorBuilder()
-  .withPhotoplethysmographColor(Color.RED)
-  .withIntValues([9, 8, 7, 6, 5, 4, 3, 2, 1, 9, 1, 8, 2, 7, 3, 6, 4, 5])
-  .build()
-)
+  const dataPbConvertedFromDecompressedJson = Converter.convertFromJson(decompressedJson)
+  const dataPbConvertedFromCompressedJson = Converter.convertFromJson(compressedJson)
 
-sensors.push(new SensorBuilder()
-  .withAccelerometerType(AccelerometerType.X_COORDINATE)
-  .withIntValues([0, 0, 0, 0, 10, 0, 0, 0, 10, 10, 0, 0, 0, 0, 0, 0, -90, 0])
-  .build()
-)
+  /* eslint-disable no-console */
+  console.log("\n")
+  console.log(JSON.stringify(dataPbConvertedFromDecompressedJson))
+  console.log("\n")
+  console.log(JSON.stringify(dataPbConvertedFromCompressedJson))
+  /* eslint-disable no-console */
+}
 
-sensors.push(new SensorBuilder()
-  .withAccelerometerType(AccelerometerType.EUCLIDEAN_DIFFERENCES_NORM)
-  .withDoubleValues([1.2, 2.4, 3, 4.0, 5.6, 6.7, 7.8, 8.9, 9.0, 0, 0, 0, 0, 0, 0, 0, 0, 0])
-  .build()
-)
-
-export const data = new DataBuilder()
-  .withTimestamps([1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 20, 30, 40, 50, 60, 70, 80, 90])
-  .withMetadata(metadata)
-  .withSensors(sensors)
-  .build()
+main()

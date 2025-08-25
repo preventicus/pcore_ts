@@ -229,71 +229,50 @@ export class Converter {
      * @returns A Sensor protobuf object.
      * @throws {Error} If the sensor type or value type is unsupported.
      */
-  private static parseFromDecompressedSensor(sensor: any): Sensor { // eslint-disable-line @typescript-eslint/no-explicit-any
-    const photoplethysmographColorMap: Record<string, Color> = {
-      GREEN: Color.GREEN,
-      RED: Color.RED,
-      BLUE: Color.BLUE
-    }
-
-    if (sensor.valuesType !== "intValuesContainer" && sensor.valuesType !== "doubleValuesContainer") {
-      throw new Error(`Unsupported sensor value type: ${sensor.valuesType}`)
-    }
-
-    const result: any = { // eslint-disable-line @typescript-eslint/no-explicit-any
-      values: {
-        oneofKind: sensor.valuesType,
-        [`${sensor.valuesType}`]: {
-          values: sensor.values
-        }
+  private static parseFromDecompressedSensor(sensor: DecompressedSensor): Sensor {
+    const values: Sensor["values"] = (() => {
+      switch (sensor.valuesType) {
+        case "intValuesContainer":
+          return { oneofKind: "intValuesContainer", intValuesContainer: { values: sensor.values } }
+        case "doubleValuesContainer":
+          return { oneofKind: "doubleValuesContainer", doubleValuesContainer: { values: sensor.values } }
+        default:
+          throw new Error(`Unsupported sensor value type: ${sensor.valuesType}`)
       }
-    }
+    })()
 
-    if (sensor.accelerometer) {
-      result.type = {
+    let type: Sensor["type"]
+    if ("accelerometer" in sensor) {
+      type = {
         oneofKind: "accelerometer",
         accelerometer: {
           type: AccelerometerType[sensor.accelerometer.type as keyof typeof AccelerometerType]
         }
       }
-    }
-
-    if (sensor.electrocardiogram) {
-      result.type = {
+    } else if ("electrocardiogram" in sensor) {
+      type = {
         oneofKind: "electrocardiogram",
-        electrocardiogram: {
-          channel: sensor.electrocardiogram.channel
-        }
+        electrocardiogram: { channel: sensor.electrocardiogram.channel }
       }
-    }
-
-    if (sensor.photoplethysmograph) {
-      if ("color" in sensor.photoplethysmograph) {
-        const colorString = sensor.photoplethysmograph.color
-        const colorEnum = photoplethysmographColorMap[colorString]
-        result.type = {
+    } else if ("photoplethysmograph" in sensor) {
+      const pp = sensor.photoplethysmograph
+      if ("color" in pp) {
+        const colorEnum = pp.color in Color ? Color[pp.color as keyof typeof Color] : Color.UNSPECIFIED
+        type = {
           oneofKind: "photoplethysmograph",
-          photoplethysmograph: {
-            light: {
-              oneofKind: "color",
-              color: colorEnum ?? Color.UNSPECIFIED
-            }
-          }
+          photoplethysmograph: { light: { oneofKind: "color", color: colorEnum } }
         }
-      } else if ("wavelengthNm" in sensor.photoplethysmograph) {
-        result.type = {
+      } else if ("wavelengthNm" in pp) {
+        type = {
           oneofKind: "photoplethysmograph",
-          photoplethysmograph: {
-            light: {
-              oneofKind: "wavelengthNm",
-              wavelengthNm: sensor.photoplethysmograph.wavelengthNm
-            }
-          }
+          photoplethysmograph: { light: { oneofKind: "wavelengthNm", wavelengthNm: pp.wavelengthNm } }
         }
       } else {
-        throw new Error("Unsupported sensor type")
+        throw new Error("Unsupported photoplethysmograph type")
       }
+    } else {
+      throw new Error("Unsupported sensor type")
     }
-    return result
+    return { values, type }
   }
 }
