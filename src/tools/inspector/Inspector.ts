@@ -31,10 +31,23 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 */
 
-import { DataPb } from "@/ProtobufDefinitions"
+import { Accelerometer, DataPb, Electrocardiogram, Photoplethysmograph } from "@/ProtobufDefinitions"
 import { UnixTimestamp } from "@/models/UnixTimestamp"
 import { Data } from "@/models/Data"
 import { InvalidDataException } from "@/Exception"
+
+export type SensorType = {
+  oneofKind: "photoplethysmograph";
+  photoplethysmograph: Photoplethysmograph;
+} | {
+  oneofKind: "accelerometer";
+  accelerometer: Accelerometer;
+} | {
+  oneofKind: "electrocardiogram";
+  electrocardiogram: Electrocardiogram;
+} | {
+  oneofKind: undefined;
+}
 
 /**
  * Utility class for inspecting compressed data without full decompression.
@@ -106,6 +119,15 @@ export class Inspector {
         return 0
       }
     }
+  }
+
+  /**
+   * Returns a list of all containing sensors types in the compressed data.
+   * @param dataPb Compressed data protobuf object
+   * @returns List of SensorType
+   */
+  static getSensorTypes(dataPb: DataPb) : SensorType[] {
+    return (dataPb.sensors ?? []).map(sensor => sensor.type)
   }
 
   /**

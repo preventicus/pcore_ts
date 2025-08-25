@@ -31,7 +31,14 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 */
 
-import { DataPb } from "../../../src/ProtobufDefinitions"
+import {
+  Accelerometer,
+  AccelerometerType,
+  Color,
+  DataPb,
+  Electrocardiogram,
+  Photoplethysmograph
+} from "../../../src/ProtobufDefinitions"
 import { Inspector } from "../../../src/tools/inspector/Inspector"
 import { SensorBuilder } from "../../../src/builder/SensorBuilder"
 import { DataBuilder, MetadataBuilder } from "../../../src"
@@ -132,6 +139,58 @@ describe("InspectorTest", () => {
       sensors: [sensor]
     })
     expect(Inspector.getNumberOfElements(dataPb)).toBe(3)
+  })
+
+  test("GetSensorTypesWithEmptyTest", () => {
+    const dataPb = DataPb.create()
+    expect(Inspector.getSensorTypes(dataPb)).toStrictEqual([])
+  })
+
+  test("GetSensorTypesWithSensorsTest", () => {
+    const sensor1 = new SensorBuilder()
+      .withElectrocardiogramChannel(1)
+      .build()
+
+    const sensor2 = new SensorBuilder()
+      .withAccelerometerType(AccelerometerType.Y_COORDINATE)
+      .build()
+
+    const sensor3 = new SensorBuilder()
+      .withElectrocardiogramChannel(2)
+      .build()
+
+    const sensor4 = new SensorBuilder()
+      .withPhotoplethysmographColor(Color.RED)
+      .build()
+    const dataPb = DataPb.create({
+      sensors: [sensor1, sensor2, sensor3, sensor4]
+    })
+    expect(Inspector.getSensorTypes(dataPb)).toStrictEqual([
+      {
+        oneofKind: "electrocardiogram",
+        electrocardiogram: {
+          channel: 1
+        }
+      }, {
+        oneofKind: "accelerometer",
+        accelerometer: {
+          type: AccelerometerType.Y_COORDINATE
+        }
+      }, {
+        oneofKind: "electrocardiogram",
+        electrocardiogram: {
+          channel: 2
+        }
+      }, {
+        oneofKind: "photoplethysmograph",
+        photoplethysmograph: {
+          light: {
+            color: Color.RED,
+            oneofKind: "color"
+          }
+        }
+      }
+    ])
   })
 
   test("ValidateCompressedWithWrongTimeZoneOffsetPositiveTest", () => {
