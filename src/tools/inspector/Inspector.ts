@@ -116,6 +116,12 @@ export class Inspector {
    * @throws {InvalidDataException} If the data violates required structural constraints.
    */
   static validateDecompressed(data: Data) {
+    if (data.metadata !== undefined) {
+      if (840 <= data.metadata.timezoneOffsetMin || data.metadata.timezoneOffsetMin <= -720) {
+        throw new InvalidDataException("Inspector.validate", "TimezoneOffset must be between -720 and 840")
+      }
+    }
+
     // case  data.timestamps.length === 0 && data.sensors.length === 0
     // means data are empty, every thing is fine.
 
@@ -172,6 +178,12 @@ export class Inspector {
    * @throws {InvalidDataException} If the compressed structure or metadata violates integrity rules.
    */
   static validateCompressed(dataPb: DataPb) {
+    if (dataPb.metadata !== undefined) {
+      if (840 <= dataPb.metadata.timezoneOffsetMin || dataPb.metadata.timezoneOffsetMin <= -720) {
+        throw new InvalidDataException("Inspector.validate", "TimezoneOffset must be between -720 and 840")
+      }
+    }
+
     if (dataPb.compressedTimestampsContainer !== undefined && dataPb.sensors.length === 0) {
       throw new InvalidDataException("Inspector.validate", "Data must have sensor data if it holds compressed timestamps")
     }

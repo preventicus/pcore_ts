@@ -59,24 +59,4 @@ describe("MetadataCompressorTest", () => {
     expect(compressed.device?.firmwareVersion?.minor).toBe(4)
     expect(compressed.device?.firmwareVersion?.patch).toBe(1)
   })
-
-  test("WrongTimeZoneOffsetPositiveTest", () => {
-    const metaData = new MetadataBuilder()
-      .withTimezoneOffset(841)
-      .build()
-
-    expect(() => MetadataCompressor.compress(metaData)).toThrow(
-      "TimezoneOffset must be between -720 and 840"
-    )
-  })
-
-  test("WrongTimeZoneOffsetNegativeTest", () => {
-    const metaData = new MetadataBuilder()
-      .withTimezoneOffset(-721)
-      .build()
-
-    expect(() => MetadataCompressor.compress(metaData)).toThrow(
-      "TimezoneOffset must be between -720 and 840"
-    )
-  })
 })

@@ -32,7 +32,6 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 */
 
 import { Metadata, Version } from "@/ProtobufDefinitions"
-import { WrongValueException } from "@/Exception"
 import { PcoreVersion } from "@generated/pcoreVersion"
 
 /**
@@ -58,10 +57,6 @@ export class MetadataCompressor {
           patch: PcoreVersion.patch
         }
       })
-    }
-
-    if (840 <= metadata.timezoneOffsetMin || metadata.timezoneOffsetMin <= -720) {
-      throw new WrongValueException("MetadataCompressor.compress", "TimezoneOffset must be between -720 and 840")
     }
 
     const metadataPb = structuredClone(metadata)

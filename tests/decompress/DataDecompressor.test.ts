@@ -155,6 +155,40 @@ describe("DataDecompressorTest", () => {
     )
   })
 
+  test("MetaDataTest", () => {
+    const metaData = new MetadataBuilder()
+      .withTimezoneOffset(400)
+      .withDeviceId("123")
+      .withDeviceName("ABC")
+      .withDeviceManufacturer("XYZ")
+      .withDeviceFirmwareVersion(3, 4, 1)
+      .build()
+
+    const data = new DataBuilder()
+      .withMetadata(metaData)
+      .build()
+
+    const decompressed = DataDecompressor.decompress(data)
+
+    expect(decompressed.metadata).toBeDefined()
+    expect(decompressed.metadata?.device).toBeDefined()
+    expect(decompressed.metadata?.pcoreVersion).toBeDefined()
+
+    expect(decompressed.metadata?.timezoneOffsetMin).toBe(400)
+
+    expect(decompressed.metadata?.pcoreVersion?.major).toBe(PcoreVersion.major)
+    expect(decompressed.metadata?.pcoreVersion?.minor).toBe(PcoreVersion.minor)
+    expect(decompressed.metadata?.pcoreVersion?.patch).toBe(PcoreVersion.patch)
+
+    expect(decompressed.metadata?.device?.name).toBe("ABC")
+    expect(decompressed.metadata?.device?.manufacturer).toBe("XYZ")
+    expect(decompressed.metadata?.device?.id).toBe("123")
+
+    expect(decompressed.metadata?.device?.firmwareVersion?.major).toBe(3)
+    expect(decompressed.metadata?.device?.firmwareVersion?.minor).toBe(4)
+    expect(decompressed.metadata?.device?.firmwareVersion?.patch).toBe(1)
+  })
+
   test("CompleteTest", () => {
     const metadataPb = new MetadataBuilder()
       .withTimezoneOffset(310)

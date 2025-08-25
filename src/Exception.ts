@@ -51,12 +51,3 @@ export class InvalidDataException extends Exception {
     super(functionName, `Invalid value in variable '${variableName}'.`)
   }
 }
-
-/**
- * Exception indicating that a value is outside the expected or allowed range.
- */
-export class WrongValueException extends Exception {
-  constructor(functionName: string, description: string) {
-    super(functionName, `Unexpected value: ${description}`)
-  }
-}

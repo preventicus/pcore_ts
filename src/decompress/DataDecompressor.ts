@@ -33,7 +33,6 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 import { DataPb, Metadata, Sensor } from "@/ProtobufDefinitions"
 import { Data } from "@/models/Data"
-import { MetadataDecompressor } from "@/decompress/MetadataDecompressor"
 import { TimestampsDecompressor } from "@/decompress/TimestampsDecompressor"
 import { SensorDecompressor } from "@/decompress/SensorDecompressor"
 import { Inspector } from "@tools/inspector/Inspector"
@@ -57,7 +56,7 @@ export class DataDecompressor {
 
     let metadata: Metadata | undefined
     if (dataPb.metadata !== undefined) {
-      metadata = MetadataDecompressor.decompress(dataPb.metadata)
+      metadata = structuredClone(dataPb.metadata)
     }
 
     const timestamps = TimestampsDecompressor.decompress(dataPb.compressedTimestampsContainer)

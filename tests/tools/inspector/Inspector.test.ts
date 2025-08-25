@@ -34,6 +34,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 import { DataPb } from "../../../src/ProtobufDefinitions"
 import { Inspector } from "../../../src/tools/inspector/Inspector"
 import { SensorBuilder } from "../../../src/builder/SensorBuilder"
+import { DataBuilder, MetadataBuilder } from "../../../src"
 
 describe("InspectorTest", () => {
   test("GetFirstUnixTimestampEmptyTest", () => {
@@ -131,5 +132,41 @@ describe("InspectorTest", () => {
       sensors: [sensor]
     })
     expect(Inspector.getNumberOfElements(dataPb)).toBe(3)
+  })
+
+  test("ValidateCompressedWithWrongTimeZoneOffsetPositiveTest", () => {
+    const metaData = new MetadataBuilder()
+      .withTimezoneOffset(841)
+      .build()
+
+    const data = new DataBuilder()
+      .withMetadata(metaData)
+      .build()
+
+    expect(() => Inspector.validateCompressed(data)).toThrow(
+      "TimezoneOffset must be between -720 and 840"
+    )
+
+    expect(() => Inspector.validateDecompressed(data)).toThrow(
+      "TimezoneOffset must be between -720 and 840"
+    )
+  })
+
+  test("ValidateCompressedWithWrongTimeZoneOffsetNegativeTest", () => {
+    const metaData = new MetadataBuilder()
+      .withTimezoneOffset(-721)
+      .build()
+
+    const data = new DataBuilder()
+      .withMetadata(metaData)
+      .build()
+
+    expect(() => Inspector.validateCompressed(data)).toThrow(
+      "TimezoneOffset must be between -720 and 840"
+    )
+
+    expect(() => Inspector.validateDecompressed(data)).toThrow(
+      "TimezoneOffset must be between -720 and 840"
+    )
   })
 })
