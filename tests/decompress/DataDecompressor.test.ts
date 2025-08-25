@@ -105,7 +105,7 @@ describe("DataDecompressorTest", () => {
     }
 
     expect(() => DataDecompressor.decompress(dataPb)).toThrow(
-      "Sensor data must have the same length as unix timestamps"
+      "Number of unix timestamps should be equal to the number of data points"
     )
   })
 
@@ -126,7 +126,7 @@ describe("DataDecompressorTest", () => {
     }
 
     expect(() => DataDecompressor.decompress(dataPb)).toThrow(
-      "Sensor data must have the same length as unix timestamps"
+      "Number of unix timestamps should be equal to the number of data points"
     )
   })
 
@@ -151,7 +151,7 @@ describe("DataDecompressorTest", () => {
     }
 
     expect(() => DataDecompressor.decompress(dataPb)).toThrow(
-      "Sensor data must have the same length as unix timestamps"
+      "Number of unix timestamps should be equal to the number of data points"
     )
   })
 

@@ -31,7 +31,14 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 */
 
-import { Accelerometer, DataPb, Electrocardiogram, Photoplethysmograph } from "@/ProtobufDefinitions"
+import {
+  Accelerometer,
+  AccelerometerType,
+  Color,
+  DataPb,
+  Electrocardiogram,
+  Photoplethysmograph, Sensor
+} from "@/ProtobufDefinitions"
 import { UnixTimestamp } from "@/models/UnixTimestamp"
 import { Data } from "@/models/Data"
 import { InvalidDataException } from "@/Exception"
@@ -172,22 +179,8 @@ export class Inspector {
       })
 
       data.sensors.forEach(sensor => {
-        switch (sensor.values.oneofKind) {
-          case "intValuesContainer": {
-            const values = sensor.values.intValuesContainer.values
-            if (values.length !== numberOfUnixTimestamps) {
-              throw new InvalidDataException("Inspector.validate", "Number of unix timestamps should be equal to the number of data points")
-            }
-            break
-          }
-          case "doubleValuesContainer": {
-            const values = sensor.values.doubleValuesContainer.values
-            if (values.length !== numberOfUnixTimestamps) {
-              throw new InvalidDataException("Inspector::validate", "Number of unix timestamps should be equal to the number of data points")
-            }
-            break
-          }
-        }
+        Inspector.checkSensorValues(sensor, numberOfUnixTimestamps)
+        Inspector.checkSensorMetaData(sensor)
       })
     }
   }
@@ -268,17 +261,63 @@ export class Inspector {
       }
 
       dataPb.sensors.forEach(sensorPb => {
-        if (sensorPb.values.oneofKind === "doubleValuesContainer") {
-          if (sensorPb.values.doubleValuesContainer.values.length !== numberOfUnixTimestamps) {
-            throw new InvalidDataException("Inspector.validate", "Sensor data must have the same length as unix timestamps")
-          }
-        }
-        if (sensorPb.values.oneofKind === "intValuesContainer") {
-          if (sensorPb.values.intValuesContainer.values.length !== numberOfUnixTimestamps) {
-            throw new InvalidDataException("Inspector.validate", "Sensor data must have the same length as unix timestamps")
-          }
-        }
+        Inspector.checkSensorValues(sensorPb, numberOfUnixTimestamps)
+        Inspector.checkSensorMetaData(sensorPb)
       })
+    }
+  }
+
+  private static checkSensorValues(sensor: Sensor, numberOfUnixTimestamps: number) {
+    switch (sensor.values.oneofKind) {
+      case "intValuesContainer": {
+        const values = sensor.values.intValuesContainer.values
+        if (values.length !== numberOfUnixTimestamps) {
+          throw new InvalidDataException("Inspector.validate", "Number of unix timestamps should be equal to the number of data points")
+        }
+        break
+      }
+      case "doubleValuesContainer": {
+        const values = sensor.values.doubleValuesContainer.values
+        if (values.length !== numberOfUnixTimestamps) {
+          throw new InvalidDataException("Inspector::validate", "Number of unix timestamps should be equal to the number of data points")
+        }
+        break
+      }
+    }
+  }
+
+  private static checkSensorMetaData(sensor: Sensor) {
+    switch (sensor.type.oneofKind) {
+      case "photoplethysmograph": {
+        const photoplethysmograph = sensor.type.photoplethysmograph
+        switch (photoplethysmograph.light.oneofKind) {
+          case "color": {
+            if (![Color.RED, Color.GREEN, Color.BLUE].includes(photoplethysmograph.light.color)) {
+              throw new InvalidDataException("Inspector::validate", "Photoplethysmograph color should be RED, GREEN or BLUE")
+            }
+            break
+          }
+          case "wavelengthNm": {
+            if (photoplethysmograph.light.wavelengthNm < 350 || photoplethysmograph.light.wavelengthNm > 1000) {
+              throw new InvalidDataException("Inspector::validate", "Photoplethysmograph wavelength should be between 350 and 1000")
+            }
+          }
+        }
+        break
+      }
+      case "electrocardiogram": {
+        const electrocardiogram = sensor.type.electrocardiogram
+        if (electrocardiogram.channel > 22) {
+          throw new InvalidDataException("Inspector::validate", "Electrocardiogram channel should be smaller or equal to 22")
+        }
+        break
+      }
+      case "accelerometer": {
+        const accelerometer = sensor.type.accelerometer
+        if (![AccelerometerType.X_COORDINATE, AccelerometerType.Y_COORDINATE, AccelerometerType.Z_COORDINATE, AccelerometerType.EUCLIDEAN_DIFFERENCES_NORM].includes(accelerometer.type)) {
+          throw new InvalidDataException("Inspector::validate", "Accelerometer type should be X_COORDINATE, Y_COORDINATE, Z_COORDINATE or EUCLIDEAN_DIFFERENCES_NORM")
+        }
+      }
     }
   }
 }
