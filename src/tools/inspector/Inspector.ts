@@ -283,6 +283,9 @@ export class Inspector {
         }
         break
       }
+      default: {
+        throw new InvalidDataException("Inspector::validate", "Sensor values must be intValuesContainer or doubleValuesContainer")
+      }
     }
   }
 
@@ -301,6 +304,10 @@ export class Inspector {
             if (photoplethysmograph.light.wavelengthNm < 350 || photoplethysmograph.light.wavelengthNm > 1000) {
               throw new InvalidDataException("Inspector::validate", "Photoplethysmograph wavelength should be between 350 and 1000")
             }
+            break
+          }
+          default: {
+            throw new InvalidDataException("Inspector::validate", "Photoplethysmograph light must be color or wavelengthNm")
           }
         }
         break
@@ -317,6 +324,10 @@ export class Inspector {
         if (![AccelerometerType.X_COORDINATE, AccelerometerType.Y_COORDINATE, AccelerometerType.Z_COORDINATE, AccelerometerType.EUCLIDEAN_DIFFERENCES_NORM].includes(accelerometer.type)) {
           throw new InvalidDataException("Inspector::validate", "Accelerometer type should be X_COORDINATE, Y_COORDINATE, Z_COORDINATE or EUCLIDEAN_DIFFERENCES_NORM")
         }
+        break
+      }
+      default: {
+        throw new InvalidDataException("Inspector::validate", "Sensor values must be photoplethysmograph, electrocardiogram or accelerometer")
       }
     }
   }

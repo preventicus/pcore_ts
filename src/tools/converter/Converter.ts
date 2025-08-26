@@ -255,17 +255,17 @@ export class Converter {
         electrocardiogram: { channel: sensor.electrocardiogram.channel }
       }
     } else if ("photoplethysmograph" in sensor) {
-      const pp = sensor.photoplethysmograph
-      if ("color" in pp) {
-        const colorEnum = pp.color in Color ? Color[pp.color as keyof typeof Color] : Color.UNSPECIFIED
+      const photoplethysmograph = sensor.photoplethysmograph
+      if ("color" in photoplethysmograph) {
+        const colorEnum = photoplethysmograph.color in Color ? Color[photoplethysmograph.color as keyof typeof Color] : Color.UNSPECIFIED
         type = {
           oneofKind: "photoplethysmograph",
           photoplethysmograph: { light: { oneofKind: "color", color: colorEnum } }
         }
-      } else if ("wavelengthNm" in pp) {
+      } else if ("wavelengthNm" in photoplethysmograph) {
         type = {
           oneofKind: "photoplethysmograph",
-          photoplethysmograph: { light: { oneofKind: "wavelengthNm", wavelengthNm: pp.wavelengthNm } }
+          photoplethysmograph: { light: { oneofKind: "wavelengthNm", wavelengthNm: photoplethysmograph.wavelengthNm } }
         }
       } else {
         throw new Error("Unsupported photoplethysmograph type")
