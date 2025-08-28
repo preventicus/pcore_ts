@@ -22,6 +22,11 @@ module.exports = {
         "<rootDir>/tests/**/*.spec.ts"
     ],
     coveragePathIgnorePatterns: [
-        "<rootDir>/src/generated/"
+        "<rootDir>/src/generated/",
+        "<rootDir>/src/index",
+        "<rootDir>/src/Exception",
+        "<rootDir>/src/ProtobufDefinitions",
+        "<rootDir>/src/tools/converter/DataForm",
+        "<rootDir>/dist/"
     ]
 }

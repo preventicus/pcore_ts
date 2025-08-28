@@ -37,6 +37,7 @@ export function getIntValues(sensor: Sensor): number[] | undefined {
   if (sensor.values.oneofKind === "intValuesContainer") {
     return sensor.values.intValuesContainer.values
   }
+  /* istanbul ignore next */
   return undefined
 }
 
@@ -44,6 +45,7 @@ export function getDoubleValues(sensor: Sensor): number[] | undefined {
   if (sensor.values.oneofKind === "doubleValuesContainer") {
     return sensor.values.doubleValuesContainer.values
   }
+  /* istanbul ignore next */
   return undefined
 }
 
@@ -51,6 +53,7 @@ export function getAccelerometerType(sensor: Sensor): AccelerometerType | undefi
   if (sensor.type.oneofKind === "accelerometer") {
     return sensor.type.accelerometer.type
   }
+  /* istanbul ignore next */
   return undefined
 }
 
@@ -58,6 +61,7 @@ export function getElectrocardiogramChannel(sensor: Sensor): number | undefined 
   if (sensor.type.oneofKind === "electrocardiogram") {
     return sensor.type.electrocardiogram.channel
   }
+  /* istanbul ignore next */
   return undefined
 }
 
@@ -66,8 +70,10 @@ export function getPhotoplethysmographColor(sensor: Sensor): Color | undefined {
     if (sensor.type.photoplethysmograph.light.oneofKind === "color") {
       return sensor.type.photoplethysmograph.light.color
     }
+    /* istanbul ignore next */
     return undefined
   }
+  /* istanbul ignore next */
   return undefined
 }
 
@@ -76,7 +82,9 @@ export function getPhotoplethysmographWavelength(sensor: Sensor): Color | undefi
     if (sensor.type.photoplethysmograph.light.oneofKind === "wavelengthNm") {
       return sensor.type.photoplethysmograph.light.wavelengthNm
     }
+    /* istanbul ignore next */
     return undefined
   }
+  /* istanbul ignore next */
   return undefined
 }

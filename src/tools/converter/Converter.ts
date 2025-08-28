@@ -168,6 +168,8 @@ export class Converter {
         break
       }
       default: {
+        /* istanbul ignore next */
+        // currently unreachable code since validator capture this error before
         throw new Error(`Unsupported sensor value type: ${sensor.values.oneofKind}`)
       }
     }
@@ -203,6 +205,8 @@ export class Converter {
             } satisfies DecompressedPhotoplethysmographColorSensorJson
           }
           default: {
+            /* istanbul ignore next */
+            // currently unreachable code since validator capture this error before
             throw new Error(`Unsupported sensor photoplethysmograph type: ${sensor.type.photoplethysmograph.light.oneofKind}`)
           }
         }
@@ -217,6 +221,8 @@ export class Converter {
         } satisfies DecompressedElectrocardiogramSensorJson
       }
       default: {
+        /* istanbul ignore next */
+        // currently unreachable code since validator capture this error before
         throw new Error(`Unsupported sensor type: ${sensor.type.oneofKind}`)
       }
     }
@@ -232,12 +238,17 @@ export class Converter {
   private static parseFromDecompressedSensor(sensor: DecompressedSensor): Sensor {
     const values: Sensor["values"] = (() => {
       switch (sensor.valuesType) {
-        case "intValuesContainer":
+        case "intValuesContainer": {
           return { oneofKind: "intValuesContainer", intValuesContainer: { values: sensor.values } }
-        case "doubleValuesContainer":
+        }
+        case "doubleValuesContainer": {
           return { oneofKind: "doubleValuesContainer", doubleValuesContainer: { values: sensor.values } }
-        default:
+        }
+        default: {
+          /* istanbul ignore next */
+          // currently unreachable code since validator capture this error before
           throw new Error(`Unsupported sensor value type: ${sensor.valuesType}`)
+        }
       }
     })()
 
@@ -268,9 +279,13 @@ export class Converter {
           photoplethysmograph: { light: { oneofKind: "wavelengthNm", wavelengthNm: photoplethysmograph.wavelengthNm } }
         }
       } else {
+        /* istanbul ignore next */
+        // currently unreachable code since validator capture this error before
         throw new Error("Unsupported photoplethysmograph type")
       }
     } else {
+      /* istanbul ignore next */
+      // currently unreachable code since validator capture this error before
       throw new Error("Unsupported sensor type")
     }
     return { values, type }
