@@ -16,7 +16,7 @@
     "example:file": "ts-node -r tsconfig-paths/register src/example/file/fileExample.ts",
     "example:converter": "ts-node -r tsconfig-paths/register src/example/converter/converterExample.ts",
     "example:inspector": "ts-node -r tsconfig-paths/register src/example/inspector/inspectorExample.ts",
-    "prepare": "npm run lint && npm run test && tsc && tsc-alias"
+    "prepare": "tsc && tsc-alias"
   },
   "devDependencies": {
     "@protobuf-ts/plugin": "^2.11.0",
