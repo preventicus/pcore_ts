@@ -32,12 +32,9 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 */
 
 import {
-  Accelerometer,
   AccelerometerType,
   Color,
-  DataPb,
-  Electrocardiogram,
-  Photoplethysmograph
+  DataPb
 } from "../../../src/ProtobufDefinitions"
 import { Inspector } from "../../../src/tools/inspector/Inspector"
 import { SensorBuilder } from "../../../src/builder/SensorBuilder"

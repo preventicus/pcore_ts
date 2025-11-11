@@ -55,7 +55,7 @@ function main() {
    * Reading Binary
    */
 
-  let dataReadPb: DataPb | undefined
+  let dataReadPb: DataPb
 
   try {
     dataReadPb = File.readPcoreBinary(__dirname + "/dataWrite.pcore")
@@ -65,16 +65,40 @@ function main() {
     return
   }
 
-  if (dataReadPb === undefined) {
-    // eslint-disable-next-line no-console
-    console.error("Error when reading the file:")
-    return
-  }
-
   const jsonRead = Converter.convertToJson(dataReadPb, DataForm.Decompressed, 2)
 
   /* eslint-disable no-console */
   console.log(jsonRead)
+  /* eslint-enable no-console */
+
+  /*
+   * Writing Json
+   */
+
+  try {
+    File.writePcoreJson(jsonRead, __dirname + "/dataWrite.pcore.json")
+  } catch (e) {
+    // eslint-disable-next-line no-console
+    console.error("Error when writing the file: ", e)
+    return
+  }
+
+  /*
+   * Reading Json
+   */
+
+  let dataReadJson: string
+
+  try {
+    dataReadJson = File.readPcoreJson(__dirname + "/dataWrite.pcore.json")
+  } catch (e) {
+    // eslint-disable-next-line no-console
+    console.error("Error when writing the file: ", e)
+    return
+  }
+
+  /* eslint-disable no-console */
+  console.log(dataReadJson)
   /* eslint-enable no-console */
 }
 

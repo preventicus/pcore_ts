@@ -40,7 +40,6 @@ import { Converter, DataBuilder, DataCompressor, DataForm, MetadataBuilder } fro
 
 describe("ConverterTest", () => {
   test("NormalDataTest", () => {
-
     const metadata = new MetadataBuilder()
       .withTimezoneOffset(400)
       .withDeviceFirmwareVersion(3, 2, 1)
