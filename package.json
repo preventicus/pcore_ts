@@ -1,0 +1,38 @@
+{
+  "name": "@preventicus/pcore",
+  "version": "2.0.0",
+  "description": "Pcore TypeScript utilities for sensor data compression",
+  "author": "Steve Merschel",
+  "license": "BSD-3-Clause",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "scripts": {
+    "generate:proto": "./scripts/INSTALL_PROTOBUF.sh",
+    "build": "npm run generate:proto && npm run lint && npm run test && tsc && tsc-alias",
+    "test": "jest",
+    "test:coverage": "jest --coverage",
+    "lint": "eslint 'src/**/*.ts' 'src/tools/**/*.ts' 'tests/**/*.ts' 'src/example/**/*.ts'",
+    "lint:fix": "eslint 'src/**/*.ts' 'src/tools/**/*.ts' 'tests/**/*.ts' 'src/example/**/*.ts' --fix",
+    "example:file": "ts-node -r tsconfig-paths/register src/example/file/fileExample.ts",
+    "example:converter": "ts-node -r tsconfig-paths/register src/example/converter/converterExample.ts",
+    "example:inspector": "ts-node -r tsconfig-paths/register src/example/inspector/inspectorExample.ts",
+    "prepare": "tsc && tsc-alias"
+  },
+  "devDependencies": {
+    "@protobuf-ts/plugin": "^2.11.0",
+    "@protobuf-ts/protoc": "^2.11.0",
+    "@types/jest": "^29.5.14",
+    "@types/node": "^20.19.1",
+    "@typescript-eslint/eslint-plugin": "^8.34.1",
+    "@typescript-eslint/parser": "^8.34.1",
+    "eslint": "^8.57.1",
+    "jest": "^29.7.0",
+    "ts-jest": "^29.3.4",
+    "ts-node": "^10.9.2",
+    "tsc-alias": "^1.8.16",
+    "tsconfig-paths": "^4.2.0"
+  },
+  "dependencies": {
+    "@protobuf-ts/runtime": "^2.11.0"
+  }
+}

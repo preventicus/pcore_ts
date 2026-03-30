@@ -1,0 +1,64 @@
+/*
+
+Created by Steve Merschel 2025
+
+Copyright © 2025 PREVENTICUS GmbH
+
+Redistribution and use in source and binary forms, with or without modification,
+are permitted provided that the following conditions are met:
+
+1. Redistributions of source code must retain the above copyright notice,
+   this list of conditions and the following disclaimer.
+
+2. Redistributions in binary form must reproduce the above copyright notice,
+   this list of conditions and the following disclaimer in the documentation
+   and/or other materials provided with the distribution.
+
+3. Neither the name of the copyright holder nor the names of its contributors
+   may be used to endorse or promote products derived from this software without
+   specific prior written permission.
+
+THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND
+ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
+WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
+DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE FOR
+ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES
+(INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES;
+LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON
+ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
+(INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
+SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+
+*/
+
+import {
+  Data,
+  Data_Metadata,
+  Data_Metadata_Device,
+  Data_Sensor,
+  Data_Sensor_Accelerometer,
+  Data_Sensor_Accelerometer_Type,
+  Data_Sensor_Photoplethysmograph,
+  Data_Sensor_Photoplethysmograph_Color,
+  Data_Sensor_Electrocardiogram,
+  Data_Sensor_IntValuesContainer,
+  Data_Sensor_DoubleValuesContainer,
+  Data_CompressedTimestampsContainer,
+  Version
+} from "@generated/pcore"
+
+export {
+  Data as DataPb,
+  Data_Metadata as Metadata,
+  Data_Metadata_Device as Device,
+  Version as Version,
+  Data_Sensor as Sensor,
+  Data_Sensor_Accelerometer as Accelerometer,
+  Data_Sensor_Accelerometer_Type as AccelerometerType,
+  Data_Sensor_Photoplethysmograph as Photoplethysmograph,
+  Data_Sensor_Photoplethysmograph_Color as Color,
+  Data_Sensor_Electrocardiogram as Electrocardiogram,
+  Data_Sensor_IntValuesContainer as IntValuesContainer,
+  Data_Sensor_DoubleValuesContainer as DoubleValuesContainer,
+  Data_CompressedTimestampsContainer as CompressedTimestampsContainer
+}
