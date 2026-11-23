@@ -130,15 +130,13 @@ describe("ConverterTest", () => {
     expect(() => Converter.convertToJson(dataPb, DataForm.Decompressed)).toThrow(InvalidDataException)
   })
 
-  test("ConvertToJsonDecompressedWithoutPPGLightTest", () => {
+  test("ConvertToJsonDecompressedErrorInPPGLightTest", () => {
     const dataPb = compressedPpgData()
     if (dataPb.sensors[0].type.oneofKind === "photoplethysmograph") {
       dataPb.sensors[0].type.photoplethysmograph.light = { oneofKind: undefined }
     }
 
-    const json = Converter.convertToJson(dataPb, DataForm.Decompressed)
-    expect(JSON.parse(json).sensors[0].photoplethysmograph).toEqual({ channel: 0 })
-    expect(Converter.convertFromJson(json)).toEqual(dataPb)
+    expect(() => Converter.convertToJson(dataPb, DataForm.Decompressed)).toThrow(InvalidDataException)
   })
 
   test("ConvertToJsonCompressedWithoutSensorTypeTest", () => {
@@ -153,18 +151,27 @@ describe("ConverterTest", () => {
     expect(() => Converter.convertToJson(dataPb, DataForm.Compressed)).toThrow(InvalidDataException)
   })
 
-  test("ConvertToJsonCompressedWithoutPPGLightTest", () => {
+  test("ConvertToJsonCompressedErrorInPPGLightTest", () => {
     const dataPb = compressedPpgData()
     if (dataPb.sensors[0].type.oneofKind === "photoplethysmograph") {
       dataPb.sensors[0].type.photoplethysmograph.light = { oneofKind: undefined }
     }
-    expect(Converter.convertFromJson(Converter.convertToJson(dataPb, DataForm.Compressed))).toEqual(dataPb)
+    expect(() => Converter.convertToJson(dataPb, DataForm.Compressed)).toThrow(InvalidDataException)
   })
 
   test("ConvertFromJsonErrorInSensorValuesTest", () => {
     let dataJson = JSON.stringify(compressedEcgData())
     dataJson = dataJson.replace("intValue", "itValue")
     expect(() => Converter.convertFromJson(dataJson)).toThrow(InvalidDataException)
+  })
+
+  test("ConvertFromJsonUnknownColorTest", () => {
+    // unknown color names are read as COLOR_UNSPECIFIED, which is not an allowed color
+    const json = JSON.stringify({
+      timestamps: [10, 20, 30],
+      sensors: [{ valuesType: "intValuesContainer", values: [1, 2, 3], photoplethysmograph: { color: "YELLOW" } }]
+    })
+    expect(() => Converter.convertFromJson(json)).toThrow(WrongValueException)
   })
 
   test("ConvertFromDecompressedJsonWithoutChannelTest", () => {

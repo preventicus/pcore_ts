@@ -33,6 +33,8 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 import {
   Accelerometer,
+  AccelerometerType,
+  Color,
   DataPb,
   Electrocardiogram,
   Photoplethysmograph,
@@ -46,6 +48,9 @@ import { TimestampsCompressor } from "@/compress/TimestampsCompressor"
 const UINT32_MAX = 4294967295
 const MIN_TIMEZONE_OFFSET_MIN = -720
 const MAX_TIMEZONE_OFFSET_MIN = 840
+const MIN_PHOTOPLETHYSMOGRAPH_WAVELENGTH_NM = 350
+const MAX_PHOTOPLETHYSMOGRAPH_WAVELENGTH_NM = 1000
+const MAX_ELECTROCARDIOGRAM_CHANNEL = 22
 
 export type SensorType = {
   oneofKind: "photoplethysmograph";
@@ -234,6 +239,12 @@ export class Inspector {
       }
       sensorIdentifications.add(sensorIdentification)
     })
+
+    // Rule 11: every photoplethysmograph has a light set
+    data.sensors.forEach(Inspector.checkPhotoplethysmographLight)
+
+    // Rule 12: every sensor type has allowed values
+    data.sensors.forEach(Inspector.checkSensorTypeValues)
   }
 
   /**
@@ -331,6 +342,12 @@ export class Inspector {
 
     // Rule 10: timezone offset is between -720 and 840
     Inspector.checkTimezoneOffset(dataPb.metadata?.timezoneOffsetMin)
+
+    // Rule 11: every photoplethysmograph has a light set
+    dataPb.sensors.forEach(Inspector.checkPhotoplethysmographLight)
+
+    // Rule 12: every sensor type that is set has allowed values
+    dataPb.sensors.forEach(Inspector.checkSensorTypeValues)
   }
 
   private static getNumberOfValues(sensor: Sensor): number {
@@ -354,6 +371,43 @@ export class Inspector {
           throw new WrongValueException("Inspector.validate", "Double values must be finite")
         }
       })
+    }
+  }
+
+  private static checkPhotoplethysmographLight(sensor: Sensor) {
+    if (sensor.type.oneofKind === "photoplethysmograph" && sensor.type.photoplethysmograph.light.oneofKind === undefined) {
+      throw new InvalidDataException("Inspector.validate", "Photoplethysmograph light must be color or wavelengthNm")
+    }
+  }
+
+  /**
+   * Checks the allowed values of a sensor type as defined in the section "Allowed sensor values"
+   * of the Pcore specification. Sensors without sensor type are not checked.
+   */
+  private static checkSensorTypeValues(sensor: Sensor) {
+    switch (sensor.type.oneofKind) {
+      case "photoplethysmograph": {
+        const light = sensor.type.photoplethysmograph.light
+        if (light.oneofKind === "color" && ![Color.RED, Color.GREEN, Color.BLUE].includes(light.color)) {
+          throw new WrongValueException("Inspector.validate", "Photoplethysmograph color should be RED, GREEN or BLUE")
+        }
+        if (light.oneofKind === "wavelengthNm" && (light.wavelengthNm < MIN_PHOTOPLETHYSMOGRAPH_WAVELENGTH_NM || light.wavelengthNm > MAX_PHOTOPLETHYSMOGRAPH_WAVELENGTH_NM)) {
+          throw new WrongValueException("Inspector.validate", "Photoplethysmograph wavelength should be between 350 and 1000")
+        }
+        break
+      }
+      case "accelerometer": {
+        if (sensor.type.accelerometer.type === AccelerometerType.UNSPECIFIED) {
+          throw new WrongValueException("Inspector.validate", "Accelerometer type must not be UNSPECIFIED")
+        }
+        break
+      }
+      case "electrocardiogram": {
+        if (sensor.type.electrocardiogram.channel > MAX_ELECTROCARDIOGRAM_CHANNEL) {
+          throw new WrongValueException("Inspector.validate", "Electrocardiogram channel should be smaller or equal to 22")
+        }
+        break
+      }
     }
   }
 

@@ -217,6 +217,54 @@ describe("DataDecompressorTest", () => {
     expect(getIntValues(data.sensors[1])).toEqual([2, 4, 6])
   })
 
+  test("MissingPpgLightTest", () => {
+    const sensor: Sensor = {
+      values: { oneofKind: "intValuesContainer", intValuesContainer: { values: [1, 1, 1] } },
+      type: { oneofKind: "photoplethysmograph", photoplethysmograph: { light: { oneofKind: undefined }, channel: 0 } }
+    }
+    expect(() => decompress({ first: 1, sizes: [3], inner: [1], outer: [0] }, [sensor])).toThrow(InvalidDataException)
+  })
+
+  test("PpgColorUnspecifiedTest", () => {
+    const sensor = new SensorBuilder().withIntValues([1, 1, 1]).withPhotoplethysmographColor(Color.UNSPECIFIED).build()
+    expect(() => decompress({ first: 1, sizes: [3], inner: [1], outer: [0] }, [sensor])).toThrow(WrongValueException)
+  })
+
+  test("MinPpgWavelengthTest", () => {
+    const sensor = new SensorBuilder().withIntValues([1, 1, 1]).withPhotoplethysmographWavelength(350).build()
+    expect(() => decompress({ first: 1, sizes: [3], inner: [1], outer: [0] }, [sensor])).not.toThrow()
+  })
+
+  test("PpgWavelengthTooSmallTest", () => {
+    const sensor = new SensorBuilder().withIntValues([1, 1, 1]).withPhotoplethysmographWavelength(349).build()
+    expect(() => decompress({ first: 1, sizes: [3], inner: [1], outer: [0] }, [sensor])).toThrow(WrongValueException)
+  })
+
+  test("MaxPpgWavelengthTest", () => {
+    const sensor = new SensorBuilder().withIntValues([1, 1, 1]).withPhotoplethysmographWavelength(1000).build()
+    expect(() => decompress({ first: 1, sizes: [3], inner: [1], outer: [0] }, [sensor])).not.toThrow()
+  })
+
+  test("PpgWavelengthTooLargeTest", () => {
+    const sensor = new SensorBuilder().withIntValues([1, 1, 1]).withPhotoplethysmographWavelength(1001).build()
+    expect(() => decompress({ first: 1, sizes: [3], inner: [1], outer: [0] }, [sensor])).toThrow(WrongValueException)
+  })
+
+  test("AccTypeUnspecifiedTest", () => {
+    const sensor = new SensorBuilder().withIntValues([1, 1, 1]).withAccelerometerType(AccelerometerType.UNSPECIFIED).build()
+    expect(() => decompress({ first: 1, sizes: [3], inner: [1], outer: [0] }, [sensor])).toThrow(WrongValueException)
+  })
+
+  test("MaxEcgChannelTest", () => {
+    const sensor = new SensorBuilder().withIntValues([1, 1, 1]).withElectrocardiogramChannel(22).build()
+    expect(() => decompress({ first: 1, sizes: [3], inner: [1], outer: [0] }, [sensor])).not.toThrow()
+  })
+
+  test("EcgChannelTooLargeTest", () => {
+    const sensor = new SensorBuilder().withIntValues([1, 1, 1]).withElectrocardiogramChannel(23).build()
+    expect(() => decompress({ first: 1, sizes: [3], inner: [1], outer: [0] }, [sensor])).toThrow(WrongValueException)
+  })
+
   test("MissingSensorTypeTest", () => {
     // sensor types are intentionally not checked when decompressing
     const sensor = new SensorBuilder().withIntValues([1, 1, 1]).build()
