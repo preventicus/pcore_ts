@@ -188,77 +188,77 @@ describe("SensorCompressor", () => {
     expect(getIntValues(compressed)).toEqual([-2, 0, 0, 0])
   })
 
-  test("PositiveIntValuesPositiveDerivationTest", () => {
+  test("PositiveIntValuesIncreasingTest", () => {
     const sensor = new SensorBuilder().withIntValues([1, 2, 3, 4]).build()
     const compressed = SensorCompressor.compress(sensor)
     expect(getIntValues(compressed)!.length).toBe(4)
     expect(getIntValues(compressed)).toEqual([1, 1, 1, 1])
   })
 
-  test("PositiveIntValuesNegativeDerivationTest", () => {
+  test("PositiveIntValuesDecreasingTest", () => {
     const sensor = new SensorBuilder().withIntValues([10, 9, 8, 7, 6, 1]).build()
     const compressed = SensorCompressor.compress(sensor)
     expect(getIntValues(compressed)!.length).toBe(6)
     expect(getIntValues(compressed)).toEqual([10, -1, -1, -1, -1, -5])
   })
 
-  test("NegativeIntValuesPositiveDerivationTest", () => {
+  test("NegativeIntValuesIncreasingTest", () => {
     const sensor = new SensorBuilder().withIntValues([-10, -9, -8, -7, -6, -1]).build()
     const compressed = SensorCompressor.compress(sensor)
     expect(getIntValues(compressed)!.length).toBe(6)
     expect(getIntValues(compressed)).toEqual([-10, 1, 1, 1, 1, 5])
   })
 
-  test("NegativeIntValuesNegativeDerivationTest", () => {
+  test("NegativeIntValuesDecreasingTest", () => {
     const sensor = new SensorBuilder().withIntValues([-10, -11, -13, -14, -18, -20]).build()
     const compressed = SensorCompressor.compress(sensor)
     expect(getIntValues(compressed)!.length).toBe(6)
     expect(getIntValues(compressed)).toEqual([-10, -1, -2, -1, -4, -2])
   })
 
-  test("MixedIntValuesNegativeDerivationTest", () => {
+  test("MixedIntValuesDecreasingTest", () => {
     const sensor = new SensorBuilder().withIntValues([3, 1, 0, -3, -4, -6]).build()
     const compressed = SensorCompressor.compress(sensor)
     expect(getIntValues(compressed)!.length).toBe(6)
     expect(getIntValues(compressed)).toEqual([3, -2, -1, -3, -1, -2])
   })
 
-  test("MixedIntValuesPositiveDerivationTest", () => {
+  test("MixedIntValuesIncreasingTest", () => {
     const sensor = new SensorBuilder().withIntValues([-3, -1, 0, 1, 1, 3]).build()
     const compressed = SensorCompressor.compress(sensor)
     expect(getIntValues(compressed)!.length).toBe(6)
     expect(getIntValues(compressed)).toEqual([-3, 2, 1, 1, 0, 2])
   })
 
-  test("PositiveIntValuesMixedDerivationTest", () => {
+  test("PositiveIntValuesMixedTrendTest", () => {
     const sensor = new SensorBuilder().withIntValues([1, 2, 3, 2, 1, 0]).build()
     const compressed = SensorCompressor.compress(sensor)
     expect(getIntValues(compressed)!.length).toBe(6)
     expect(getIntValues(compressed)).toEqual([1, 1, 1, -1, -1, -1])
   })
 
-  test("MixedIntValuesMixedDerivationTest", () => {
+  test("MixedIntValuesMixedTrendStartingNegativeTest", () => {
     const sensor = new SensorBuilder().withIntValues([-3, -2, 1, 0, 1, -2]).build()
     const compressed = SensorCompressor.compress(sensor)
     expect(getIntValues(compressed)!.length).toBe(6)
     expect(getIntValues(compressed)).toEqual([-3, 1, 3, -1, 1, -3])
   })
 
-  test("MixedIntValuesMixedDerivationTest2", () => {
+  test("MixedIntValuesMixedTrendStartingPositiveTest", () => {
     const sensor = new SensorBuilder().withIntValues([3, 2, -1, 0, -1, 2]).build()
     const compressed = SensorCompressor.compress(sensor)
     expect(getIntValues(compressed)!.length).toBe(6)
     expect(getIntValues(compressed)).toEqual([3, -1, -3, 1, -1, 3])
   })
 
-  test("NegativeIntValuesMixedDerivationTest", () => {
+  test("NegativeIntValuesMixedTrendIncreasingFirstTest", () => {
     const sensor = new SensorBuilder().withIntValues([-4, -3, -1, -1, -1, -2]).build()
     const compressed = SensorCompressor.compress(sensor)
     expect(getIntValues(compressed)!.length).toBe(6)
     expect(getIntValues(compressed)).toEqual([-4, 1, 2, 0, 0, -1])
   })
 
-  test("NegativeIntValuesMixedDerivationTest2", () => {
+  test("NegativeIntValuesMixedTrendDecreasingFirstTest", () => {
     const sensor = new SensorBuilder().withIntValues([-1, -5, -6, -4, -3, -2]).build()
     const compressed = SensorCompressor.compress(sensor)
     expect(getIntValues(compressed)!.length).toBe(6)
@@ -279,17 +279,23 @@ describe("SensorCompressor", () => {
     expect(getIntValues(compressed)).toEqual([-909, 1, -7, -1, 3, 0, 7, 10, 5, 5, 1, 1, 4, -3, -1, -2, -2, -4, -3, -1, -11, -5, -11, 7, -3, -3, 12, 6, 6, 9, 6, 9, 17, 8, 6, 6, -9, -19, -15, -8, -9, -2, -9, 0, -2, -7, -7, -4, -6, -6, -6, -4, -6, -3, -4, -4, 5, 2, 8, 7, 8, 9, 3, 3, -6, -7, -7, -8, -7, -14, -10, -8, -2, -1, -2, -4, -5, -13, -15, -3, -1, -2, -1, -1, 0, 4, -12, -11, -25, -17, -20, -14, -20, -23, -35, -40, -77, -83, -94, -78, -81, -75, -47, -29, -9, 7, 14, 24, 26, 40, 22, 42, 27, 26, 38, 20, 13, 0, -4, -3, 4, 8, 10, 11, 19, 25, 23, 36, 25, 40, 28, 37, 20, 14, 22, 5, -15, -33, -60, 8, 75, 152, 144, 118, 65, 76, 85, 97, 78, 34, 9, 17, 40, 50, 34, 50, 55, 41, 37, 39, 21, 35, 40, 29, 24, 40, 21, 6, 6, -11, -5, -9, -17, -21, -21, -9, -5, 0, 0, 3, 7, 5, -1, -2, 1, 2, -5, -8, -21, -50, -38, -39, -25, -36, -29, -62, -70, -75, -50, -10, -6, -4, -18, -11, -24, -20, -23, -24, -23, -12, -18, -33, -14, -1, 1, 0, 20, 33, 8, -30, -58, -77, -55, -78, -150, -231, -305, -417, -555, -720, -1116, -1223, 64, 1051, 1004, 750, 381, 55, 47, 123, 55, 46, 81, 171, 193, 185, 193, 176, 141, 89, 40, -9, -26, -47, -46, -48, -51, -35, -26, -18, -11, 9, -9, -13, -36, -32, -48, -39, -22, 0, 10, 16, 11, -1, -19, -12, 13, 34, 67, 96, 104, 126, 112, 88, 54, 25, 6, 8, 19, 46, 69, 80, 50, 42, 21, -18, -37, -48, -91, -98, -85, -87, -76, -44, -27, -37, -54, -69, -83, -106, -105, -67, -62, -15, 13, 12, 44, 45, 10, 0, 8, 4, 7, 31, 37, 52, 57, 49, 36, 56, 43, 52, 37, 20, 3, 4, -4, -1, 1, 6, 4, 0, -1, -7, -10, -29, -24, -40, -23, -19, -16, -11, -4, -4, 6, 3, 8, -4, 2, -4, 2, -8, 0, -10, -1, 0, 4, 3, 7, 5, 0, 1, 5, -2, 5, 0, 10, -7, -2, -1, 5, 3, 1, 0, -9, -9, 3, -13, 2, 2, 3, 13, 11, 13, 5, 2, 1, 3, -2, -3, -1, -2, -2, -7, -11, -15, -15, -7, -4, -7, -5, -4, -2, -1, 1, 7, 2])
   })
 
-  test("ACCNormValuesTest", () => {
-    const sensor = new SensorBuilder().withDoubleValues([975.9780, 983.0051, 976.6443, 976.3959, 976.8055, 976.3140, 973.7654, 974.8728, 976.9058, 971.5750, 971.6965, 977.5822, 975.3389, 977.1433, 980.6783, 981.7836, 976.9058, 980.5085, 981.2003, 985.6440, 982.6067, 981.4199, 977.6144, 978.7206, 977.8645, 976.7236, 979.0056, 978.7589, 975.0287, 973.9225, 973.0468, 972.3893, 977.0005, 971.1658, 973.1531, 974.1401, 972.6567, 971.3460, 972.5071, 972.0566, 973.9168, 977.6896, 978.6782, 972.0561, 973.9790, 976.6074, 977.8231, 976.7139, 974.6143, 973.0267, 975.9990, 971.8863, 973.1444, 972.1250, 970.9501, 971.8863, 974.0996, 972.4263, 972.6145, 980.3515, 974.9103, 971.9408, 973.2518, 974.2212, 981.0973, 976.7236, 978.9408, 975.7792, 974.8066, 977.1346, 975.2748, 977.3198, 975.7095, 975.3958, 973.1721, 975.1533, 975.5209, 974.0457, 976.3473, 984.8705]).build()
-    const compressed = SensorCompressor.compress(sensor)
-    expect(getDoubleValues(compressed)!.length).toBe(80)
-    expect(getDoubleValues(compressed)).toEqual([975.9780, 983.0051, 976.6443, 976.3959, 976.8055, 976.3140, 973.7654, 974.8728, 976.9058, 971.5750, 971.6965, 977.5822, 975.3389, 977.1433, 980.6783, 981.7836, 976.9058, 980.5085, 981.2003, 985.6440, 982.6067, 981.4199, 977.6144, 978.7206, 977.8645, 976.7236, 979.0056, 978.7589, 975.0287, 973.9225, 973.0468, 972.3893, 977.0005, 971.1658, 973.1531, 974.1401, 972.6567, 971.3460, 972.5071, 972.0566, 973.9168, 977.6896, 978.6782, 972.0561, 973.9790, 976.6074, 977.8231, 976.7139, 974.6143, 973.0267, 975.9990, 971.8863, 973.1444, 972.1250, 970.9501, 971.8863, 974.0996, 972.4263, 972.6145, 980.3515, 974.9103, 971.9408, 973.2518, 974.2212, 981.0973, 976.7236, 978.9408, 975.7792, 974.8066, 977.1346, 975.2748, 977.3198, 975.7095, 975.3958, 973.1721, 975.1533, 975.5209, 974.0457, 976.3473, 984.8705])
-  })
-
   test("ECGValuesTest", () => {
     const sensor = new SensorBuilder().withIntValues([87, 50, -21, 14, 50, -33, -38, 84, 77, -58, -50, 16, 45, 125, -29, -377, -485, -444, -323, -282, -473, -630, -942, -1377, -1102, -275, 14, -157, -198, -205, -343, -396, -84, 99, -280, -720, -1148, -1629, -1626, -1203, -333, 1039, 1401, 461, 7, 287, 241, -45, 89, 246, 41, -113, -116, -130, -99, 16, 91, -21, -333, -311, 149, 137, -217, -219, -171, -159, 36, 147, 123, 96, -224, -582]).build()
     const compressed = SensorCompressor.compress(sensor)
     expect(getIntValues(compressed)!.length).toBe(72)
     expect(getIntValues(compressed)).toEqual([87, -37, -71, 35, 36, -83, -5, 122, -7, -135, 8, 66, 29, 80, -154, -348, -108, 41, 121, 41, -191, -157, -312, -435, 275, 827, 289, -171, -41, -7, -138, -53, 312, 183, -379, -440, -428, -481, 3, 423, 870, 1372, 362, -940, -454, 280, -46, -286, 134, 157, -205, -154, -3, -14, 31, 115, 75, -112, -312, 22, 460, -12, -354, -2, 48, 12, 195, 111, -24, -27, -320, -358])
+  })
+
+  test("EmptyDoubleValuesTest", () => {
+    const sensor = new SensorBuilder().withDoubleValues([]).build()
+    const compressed = SensorCompressor.compress(sensor)
+    expect(getDoubleValues(compressed)!.length).toBe(0)
+  })
+
+  test("RealDoubleValuesTest", () => {
+    const sensor = new SensorBuilder().withDoubleValues([975.9780, 983.0051, 976.6443, 976.3959, 976.8055, 976.3140, 973.7654, 974.8728, 976.9058, 971.5750, 971.6965, 977.5822, 975.3389, 977.1433, 980.6783, 981.7836, 976.9058, 980.5085, 981.2003, 985.6440, 982.6067, 981.4199, 977.6144, 978.7206, 977.8645, 976.7236, 979.0056, 978.7589, 975.0287, 973.9225, 973.0468, 972.3893, 977.0005, 971.1658, 973.1531, 974.1401, 972.6567, 971.3460, 972.5071, 972.0566, 973.9168, 977.6896, 978.6782, 972.0561, 973.9790, 976.6074, 977.8231, 976.7139, 974.6143, 973.0267, 975.9990, 971.8863, 973.1444, 972.1250, 970.9501, 971.8863, 974.0996, 972.4263, 972.6145, 980.3515, 974.9103, 971.9408, 973.2518, 974.2212, 981.0973, 976.7236, 978.9408, 975.7792, 974.8066, 977.1346, 975.2748, 977.3198, 975.7095, 975.3958, 973.1721, 975.1533, 975.5209, 974.0457, 976.3473, 984.8705]).build()
+    const compressed = SensorCompressor.compress(sensor)
+    expect(getDoubleValues(compressed)!.length).toBe(80)
+    expect(getDoubleValues(compressed)).toEqual([975.9780, 983.0051, 976.6443, 976.3959, 976.8055, 976.3140, 973.7654, 974.8728, 976.9058, 971.5750, 971.6965, 977.5822, 975.3389, 977.1433, 980.6783, 981.7836, 976.9058, 980.5085, 981.2003, 985.6440, 982.6067, 981.4199, 977.6144, 978.7206, 977.8645, 976.7236, 979.0056, 978.7589, 975.0287, 973.9225, 973.0468, 972.3893, 977.0005, 971.1658, 973.1531, 974.1401, 972.6567, 971.3460, 972.5071, 972.0566, 973.9168, 977.6896, 978.6782, 972.0561, 973.9790, 976.6074, 977.8231, 976.7139, 974.6143, 973.0267, 975.9990, 971.8863, 973.1444, 972.1250, 970.9501, 971.8863, 974.0996, 972.4263, 972.6145, 980.3515, 974.9103, 971.9408, 973.2518, 974.2212, 981.0973, 976.7236, 978.9408, 975.7792, 974.8066, 977.1346, 975.2748, 977.3198, 975.7095, 975.3958, 973.1721, 975.1533, 975.5209, 974.0457, 976.3473, 984.8705])
   })
 })

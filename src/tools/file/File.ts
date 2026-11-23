@@ -32,6 +32,8 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 */
 
 import { DataPb } from "../../ProtobufDefinitions"
+import { WrongValueException } from "@/Exception"
+import { Inspector } from "@tools/inspector/Inspector"
 import * as fs from "node:fs"
 
 /**
@@ -42,8 +44,11 @@ export class File {
    * Writes a DataPb object to disk as a Pcore binary file.
    * @param dataPb The DataPb object to write
    * @param path The target file path
+   * @throws {InvalidDataException} If the data is structurally inconsistent, e.g. empty
+   * @throws {WrongValueException} If a single value is outside of its allowed range
    */
-  static writePcoreBinary(dataPb:DataPb, path: string) {
+  static writePcoreBinary(dataPb: DataPb, path: string) {
+    Inspector.validateCompressed(dataPb)
     const raw = DataPb.toBinary(dataPb)
     fs.writeFileSync(path, raw)
   }
@@ -52,10 +57,19 @@ export class File {
    * Reads a Pcore binary file from disk and deserializes it into a DataPb object.
    * @param path The path to the binary file
    * @returns The deserialized DataPb object
+   * @throws {WrongValueException} If a 64-bit integer in the file is not a safe JavaScript integer
    */
   static readPcoreBinary(path: string) : DataPb {
     const raw = fs.readFileSync(path)
-    return DataPb.fromBinary(raw)
+    try {
+      return DataPb.fromBinary(raw)
+    } catch (error) {
+      // 64-bit integers are read as `number`, protobuf-ts throws this error for values outside of ±(2^53 - 1)
+      if (error instanceof Error && error.message === "cannot convert to safe number") {
+        throw new WrongValueException("File.readPcoreBinary", "64-bit integers must be safe integers")
+      }
+      throw error
+    }
   }
 
   /**

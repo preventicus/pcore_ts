@@ -71,9 +71,10 @@ export class SensorBuilder {
   /**
    * Sets the sensor type to Photoplethysmograph with a specific color.
    * @param color - The light color used by the photoplethysmograph.
+   * @param channel - Distinguishes several photoplethysmographs with the same light (default 0).
    * @returns The current builder instance for chaining.
    */
-  withPhotoplethysmographColor(color: Color): this {
+  withPhotoplethysmographColor(color: Color, channel: number = 0): this {
     this.sensor.type = {
       oneofKind: "photoplethysmograph",
       photoplethysmograph: {
@@ -81,6 +82,7 @@ export class SensorBuilder {
           oneofKind: "color",
           color,
         },
+        channel,
       },
     }
     return this
@@ -89,9 +91,10 @@ export class SensorBuilder {
   /**
    * Sets the sensor type to Photoplethysmograph with a specific wavelength.
    * @param wavelengthNm - The wavelength in nanometers used by the photoplethysmograph.
+   * @param channel - Distinguishes several photoplethysmographs with the same light (default 0).
    * @returns The current builder instance for chaining.
    */
-  withPhotoplethysmographWavelength(wavelengthNm: number): this {
+  withPhotoplethysmographWavelength(wavelengthNm: number, channel: number = 0): this {
     this.sensor.type = {
       oneofKind: "photoplethysmograph",
       photoplethysmograph: {
@@ -99,6 +102,7 @@ export class SensorBuilder {
           oneofKind: "wavelengthNm",
           wavelengthNm,
         },
+        channel,
       },
     }
     return this
@@ -107,13 +111,15 @@ export class SensorBuilder {
   /**
    * Sets the sensor type to Accelerometer with a specific coordinate type.
    * @param type - The accelerometer type (e.g. X, Y, Z coordinate or norm).
+   * @param channel - Distinguishes several accelerometers of the same type (default 0).
    * @returns The current builder instance for chaining.
    */
-  withAccelerometerType(type: AccelerometerType): this {
+  withAccelerometerType(type: AccelerometerType, channel: number = 0): this {
     this.sensor.type = {
       oneofKind: "accelerometer",
       accelerometer: {
-        type: type
+        type,
+        channel
       }
     }
     return this

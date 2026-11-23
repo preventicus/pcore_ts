@@ -31,7 +31,14 @@ All of the following are exported from the package root (`src/index.ts`).
 | `Converter`, `DataForm`                              | Converts between protobuf data and compressed or decompressed JSON     |
 | `Inspector`                                          | Reads properties of protobuf data without decompressing it, validation |
 | `DataPb`, `Sensor`, `Metadata`, `Color`, …           | Protobuf types generated from the Pcore definition                     |
-| `InvalidDataException`                               | Thrown when data violates the Pcore validation rules                   |
+| `InvalidDataException`, `WrongValueException`        | Thrown when data violates the Pcore validation rules (structure / value range) |
+
+### 64-bit integers
+
+The library implements Pcore version 2.1.0. Unix timestamps and integer sensor values are 64-bit integers in Pcore,
+but are represented as JavaScript `number`. Therefore they must be safe integers (between `Number.MIN_SAFE_INTEGER`
+and `Number.MAX_SAFE_INTEGER`, i.e. ±(2^53 − 1)); this also applies to the differences between consecutive integer values.
+Data that violates this is rejected with a `WrongValueException` when compressing, decompressing or reading a `.pcore` file.
 
 ---
 

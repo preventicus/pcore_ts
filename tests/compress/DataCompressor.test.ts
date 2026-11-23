@@ -32,7 +32,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 */
 
 import { AccelerometerType, Color, DataPb, Sensor } from "../../src/ProtobufDefinitions"
-import { DataCompressor } from "../../src"
+import { DataCompressor, InvalidDataException, WrongValueException } from "../../src"
 import { DataBuilder } from "../../src"
 import { PcoreVersion } from "@generated/pcoreVersion"
 import { SensorBuilder } from "../../src"
@@ -47,141 +47,207 @@ describe("DataCompressorTest", () => {
     expect(dataPb.sensors.length).toBe(0)
   })
 
+  // Sensors given as "int_values" / "double_values" in the spec get a sensor type that is valid and unique within the test
+  function intSensor(values: number[]): Sensor {
+    return new SensorBuilder().withIntValues(values).withElectrocardiogramChannel(1).build()
+  }
+
+  function doubleSensor(values: number[]): Sensor {
+    return new SensorBuilder().withDoubleValues(values).withElectrocardiogramChannel(2).build()
+  }
+
+  function compress(timestamps: number[], sensors: Sensor[], timezoneOffsetMin?: number): DataPb {
+    const builder = new DataBuilder().withTimestamps(timestamps).withSensors(sensors)
+    if (timezoneOffsetMin !== undefined) {
+      builder.withMetadata(new MetadataBuilder().withTimezoneOffset(timezoneOffsetMin).build())
+    }
+    return DataCompressor.compress(builder.build())
+  }
+
   test("EmptyWithCompressorTest", () => {
-    const data = new DataBuilder().build()
-    const dataPb = DataCompressor.compress(data)
-
-    expect(dataPb.metadata).toBeDefined()
-    expect(dataPb.metadata?.pcoreVersion).toBeDefined()
-    expect(dataPb.metadata?.pcoreVersion?.major).toBe(PcoreVersion.major)
-    expect(dataPb.metadata?.pcoreVersion?.minor).toBe(PcoreVersion.minor)
-    expect(dataPb.metadata?.pcoreVersion?.patch).toBe(PcoreVersion.patch)
-
-    expect(dataPb.metadata?.device).toBeUndefined()
-    expect(dataPb.compressedTimestampsContainer).toBeUndefined()
-    expect(dataPb.sensors.length).toBe(0)
-  })
-
-  test("EqualTimestampTest", () => {
-    const sensor = new SensorBuilder()
-      .withIntValues([1, 2, 3, 4, 5])
-      .withElectrocardiogramChannel(1)
-      .build()
-
-    const data = new DataBuilder()
-      .withTimestamps([1, 2, 4, 4, 5])
-      .withSensor(sensor)
-      .build()
-
-    expect(() => DataCompressor.compress(data)).toThrow(
-      "Timestamp should be strictly monotonically increasing"
-    )
-  })
-
-  test("BackJumpTimestampTest", () => {
-    const sensor = new SensorBuilder()
-      .withIntValues([1, 2, 3, 4, 5])
-      .withElectrocardiogramChannel(1)
-      .build()
-
-    const data = new DataBuilder()
-      .withTimestamps([1, 2, 3, 2, 5])
-      .withSensor(sensor)
-      .build()
-
-    expect(() => DataCompressor.compress(data)).toThrow(
-      "Timestamp should be strictly monotonically increasing"
-    )
-  })
-
-  test("NegativeTimestampTest", () => {
-    const sensor = new SensorBuilder()
-      .withIntValues([1, 2, 3, 4, 5])
-      .withElectrocardiogramChannel(1)
-      .build()
-
-    const data = new DataBuilder()
-      .withTimestamps([-1, 2, 3, 4, 5])
-      .withSensor(sensor)
-      .build()
-
-    expect(() => DataCompressor.compress(data)).toThrow(
-      "Timestamp should be positive or 0"
-    )
+    // empty data is not valid since Pcore 2.1.0 (compression rule 1)
+    expect(() => DataCompressor.compress(new DataBuilder().build())).toThrow(InvalidDataException)
   })
 
   test("MissingUnixTimestampsTest", () => {
-    const sensor = new SensorBuilder()
-      .withIntValues([0, 3, 1, 3, 2])
-      .build()
-
-    const data = new DataBuilder()
-      .withSensor(sensor)
-      .build()
-
-    expect(() => DataCompressor.compress(data)).toThrow(
-      "Data must hold unix timestamps if it has sensor data"
-    )
+    expect(() => compress([], [intSensor([0, 3, 1, 3, 2])])).toThrow(InvalidDataException)
   })
 
   test("MissingSensorTest", () => {
-    const data = new DataBuilder()
-      .withTimestamps([1, 2, 3, 4, 5])
-      .build()
-
-    expect(() => DataCompressor.compress(data)).toThrow(
-      "Data must have sensor data if it holds unix timestamps"
-    )
+    expect(() => compress([1, 2, 3, 4, 5], [])).toThrow(InvalidDataException)
   })
 
   test("DifferentNumberSensorIntValuesTest", () => {
-    const sensor = new SensorBuilder()
-      .withIntValues([3, 1, 3, 2])
-      .build()
-
-    const data = new DataBuilder()
-      .withTimestamps([1, 2, 3, 4, 5])
-      .withSensor(sensor)
-      .build()
-
-    expect(() => DataCompressor.compress(data)).toThrow(
-      "Number of unix timestamps should be equal to the number of data points"
-    )
+    expect(() => compress([1, 2, 3, 4, 5], [intSensor([3, 1, 3, 2, 7, 6, 4])])).toThrow(InvalidDataException)
   })
 
   test("DifferentNumberSensorDoubleValuesTest", () => {
-    const sensor = new SensorBuilder()
-      .withDoubleValues([3, 1, 3, 2, 7, 6, 4])
-      .build()
-
-    const data = new DataBuilder()
-      .withTimestamps([1, 2, 3, 4, 5])
-      .withSensor(sensor)
-      .build()
-
-    expect(() => DataCompressor.compress(data)).toThrow(
-      "Number of unix timestamps should be equal to the number of data points"
-    )
+    expect(() => compress([1, 2, 3, 4, 5], [doubleSensor([3, 1, 3, 2, 7, 6, 4])])).toThrow(InvalidDataException)
   })
 
   test("DifferentNumberSensorMixedValuesTest", () => {
-    const sensorInt = new SensorBuilder()
-      .withIntValues([3, 1, 3, 2, 7, 6, 4])
-      .build()
+    expect(() => compress([1, 2, 3, 4, 5], [doubleSensor([3, 1, 3, 2, 7]), intSensor([3, 1, 3, 2, 7, 6, 4])])).toThrow(InvalidDataException)
+  })
 
-    const sensorDouble = new SensorBuilder()
-      .withIntValues([3, 1, 3, 2, 7, 6, 4])
-      .build()
+  test("WrongTimeZoneOffsetNegativeTest", () => {
+    expect(() => compress([1, 2, 3], [intSensor([1, 2, 3])], -721)).toThrow(WrongValueException)
+  })
 
-    const data = new DataBuilder()
-      .withTimestamps([1, 2, 3, 4, 5])
-      .withSensor(sensorInt)
-      .withSensor(sensorDouble)
-      .build()
+  test("WrongTimeZoneOffsetPositiveTest", () => {
+    expect(() => compress([1, 2, 3], [intSensor([1, 2, 3])], 841)).toThrow(WrongValueException)
+  })
 
-    expect(() => DataCompressor.compress(data)).toThrow(
-      "Number of unix timestamps should be equal to the number of data points"
-    )
+  test("TimeZoneOffsetLimitsTest", () => {
+    expect(() => compress([1, 2, 3], [intSensor([1, 2, 3])], -720)).not.toThrow()
+    expect(() => compress([1, 2, 3], [intSensor([1, 2, 3])], 840)).not.toThrow()
+  })
+
+  test("DuplicateUnixTimestampsTest", () => {
+    expect(() => compress([1, 2, 2, 3, 4], [intSensor([1, 2, 3, 4, 5])])).toThrow(InvalidDataException)
+  })
+
+  test("DecreasingUnixTimestampsTest", () => {
+    expect(() => compress([1, 3, 2, 4, 5], [intSensor([1, 2, 3, 4, 5])])).toThrow(InvalidDataException)
+  })
+
+  test("NegativeUnixTimestampTest", () => {
+    expect(() => compress([-2, -1, 0], [intSensor([1, 2, 3])])).toThrow(WrongValueException)
+  })
+
+  test("UnsafeUnixTimestampTest", () => {
+    // JavaScript-specific: 64-bit integers are stored as number and must be safe integers
+    expect(() => compress([2 ** 53], [intSensor([1])])).toThrow(WrongValueException)
+    expect(() => compress([1, 2.5, 4], [intSensor([1, 2, 3])])).toThrow(WrongValueException)
+  })
+
+  test("MaxSectionDurationTest", () => {
+    expect(() => compress([0, 4294967295], [intSensor([1, 2])])).not.toThrow()
+  })
+
+  test("InnerSectionDurationOverflowTest", () => {
+    expect(() => compress([0, 4294967296], [intSensor([1, 2])])).toThrow(WrongValueException)
+  })
+
+  test("OuterSectionDurationOverflowTest", () => {
+    expect(() => compress([0, 1, 2, 4294967297], [intSensor([1, 2, 3, 4])])).toThrow(WrongValueException)
+  })
+
+  // The spec uses the int64 limits for the following two cases. This library stores 64-bit integers
+  // as number, so the limits are those of safe integers (Number.MIN_SAFE_INTEGER / Number.MAX_SAFE_INTEGER).
+  test("MaxIntValueDeltaTest", () => {
+    expect(() => compress([1, 2], [intSensor([Number.MIN_SAFE_INTEGER, 0])])).not.toThrow()
+  })
+
+  test("IntValueDeltaOverflowTest", () => {
+    expect(() => compress([1, 2], [intSensor([Number.MIN_SAFE_INTEGER, Number.MAX_SAFE_INTEGER])])).toThrow(WrongValueException)
+  })
+
+  test("UnsafeIntValueTest", () => {
+    // JavaScript-specific: 64-bit integers are stored as number and must be safe integers
+    expect(() => compress([1, 2], [intSensor([2 ** 53, 0])])).toThrow(WrongValueException)
+    expect(() => compress([1, 2], [intSensor([1.5, 0])])).toThrow(WrongValueException)
+  })
+
+  test("NonFiniteDoubleValueTest", () => {
+    // not covered by the spec test cases, because JSON cannot represent NaN and Infinity
+    expect(() => compress([1, 2, 3], [doubleSensor([1, NaN, 3])])).toThrow(WrongValueException)
+    expect(() => compress([1, 2, 3], [doubleSensor([1, Infinity, 3])])).toThrow(WrongValueException)
+    expect(() => compress([1, 2, 3], [doubleSensor([1, -Infinity, 3])])).toThrow(WrongValueException)
+  })
+
+  test("MissingSensorTypeTest", () => {
+    const sensor = new SensorBuilder().withIntValues([1, 2, 3]).build()
+    expect(() => compress([1, 2, 3], [sensor])).toThrow(InvalidDataException)
+  })
+
+  test("DuplicatePpgSensorTest", () => {
+    const sensors = [
+      new SensorBuilder().withIntValues([1, 2, 3]).withPhotoplethysmographColor(Color.GREEN).build(),
+      new SensorBuilder().withIntValues([4, 5, 6]).withPhotoplethysmographColor(Color.GREEN).build()
+    ]
+    expect(() => compress([1, 2, 3], sensors)).toThrow(InvalidDataException)
+  })
+
+  test("DuplicatePpgSensorExplicitChannelTest", () => {
+    const sensors = [
+      new SensorBuilder().withIntValues([1, 2, 3]).withPhotoplethysmographColor(Color.GREEN, 0).build(),
+      new SensorBuilder().withIntValues([4, 5, 6]).withPhotoplethysmographColor(Color.GREEN).build()
+    ]
+    expect(() => compress([1, 2, 3], sensors)).toThrow(InvalidDataException)
+  })
+
+  test("DistinctPpgChannelsTest", () => {
+    const sensors = [
+      new SensorBuilder().withIntValues([1, 2, 3]).withPhotoplethysmographColor(Color.GREEN, 0).build(),
+      new SensorBuilder().withIntValues([4, 5, 6]).withPhotoplethysmographColor(Color.GREEN, 1).build()
+    ]
+    expect(() => compress([1, 2, 3], sensors)).not.toThrow()
+  })
+
+  test("DistinctPpgLightTest", () => {
+    const sensors = [
+      new SensorBuilder().withIntValues([1, 2, 3]).withPhotoplethysmographColor(Color.GREEN).build(),
+      new SensorBuilder().withIntValues([4, 5, 6]).withPhotoplethysmographColor(Color.RED).build()
+    ]
+    expect(() => compress([1, 2, 3], sensors)).not.toThrow()
+  })
+
+  test("DuplicateAccSensorTest", () => {
+    const sensors = [
+      new SensorBuilder().withIntValues([1, 2, 3]).withAccelerometerType(AccelerometerType.X_COORDINATE, 1).build(),
+      new SensorBuilder().withIntValues([4, 5, 6]).withAccelerometerType(AccelerometerType.X_COORDINATE, 1).build()
+    ]
+    expect(() => compress([1, 2, 3], sensors)).toThrow(InvalidDataException)
+  })
+
+  test("DistinctAccChannelsTest", () => {
+    const sensors = [
+      new SensorBuilder().withIntValues([1, 2, 3]).withAccelerometerType(AccelerometerType.X_COORDINATE, 0).build(),
+      new SensorBuilder().withIntValues([4, 5, 6]).withAccelerometerType(AccelerometerType.X_COORDINATE, 1).build()
+    ]
+    expect(() => compress([1, 2, 3], sensors)).not.toThrow()
+  })
+
+  test("DistinctAccTypesTest", () => {
+    const sensors = [
+      new SensorBuilder().withIntValues([1, 2, 3]).withAccelerometerType(AccelerometerType.X_COORDINATE).build(),
+      new SensorBuilder().withIntValues([4, 5, 6]).withAccelerometerType(AccelerometerType.Y_COORDINATE).build(),
+      new SensorBuilder().withIntValues([7, 8, 9]).withAccelerometerType(AccelerometerType.Z_COORDINATE).build()
+    ]
+    expect(() => compress([1, 2, 3], sensors)).not.toThrow()
+  })
+
+  test("DuplicateEcgChannelTest", () => {
+    const sensors = [
+      new SensorBuilder().withIntValues([1, 2, 3]).withElectrocardiogramChannel(2).build(),
+      new SensorBuilder().withIntValues([4, 5, 6]).withElectrocardiogramChannel(2).build()
+    ]
+    expect(() => compress([1, 2, 3], sensors)).toThrow(InvalidDataException)
+  })
+
+  test("DistinctSensorTypesSameChannelTest", () => {
+    const sensors = [
+      new SensorBuilder().withIntValues([1, 2, 3]).withPhotoplethysmographColor(Color.GREEN).build(),
+      new SensorBuilder().withIntValues([4, 5, 6]).withAccelerometerType(AccelerometerType.X_COORDINATE).build(),
+      new SensorBuilder().withDoubleValues([0.1, 0.2, 0.3]).withElectrocardiogramChannel(0).build()
+    ]
+    expect(() => compress([1, 2, 3], sensors)).not.toThrow()
+  })
+
+  test("AccelerometerTypeUnspecifiedTest", () => {
+    // the spec explicitly allows TYPE_UNSPECIFIED for the type field of an accelerometer
+    const sensor = new SensorBuilder().withIntValues([1, 2, 3]).withAccelerometerType(AccelerometerType.UNSPECIFIED).build()
+    expect(() => compress([1, 2, 3], [sensor])).not.toThrow()
+  })
+
+  test("ChannelsTest", () => {
+    const sensors = [
+      new SensorBuilder().withIntValues([1, 2, 3]).withPhotoplethysmographWavelength(530, 3).build(),
+      new SensorBuilder().withIntValues([4, 5, 6]).withAccelerometerType(AccelerometerType.X_COORDINATE, 2).build()
+    ]
+    const dataPb = compress([1, 2, 3], sensors)
+    expect(dataPb.sensors[0].type.oneofKind === "photoplethysmograph" && dataPb.sensors[0].type.photoplethysmograph.channel).toBe(3)
+    expect(dataPb.sensors[1].type.oneofKind === "accelerometer" && dataPb.sensors[1].type.accelerometer.channel).toBe(2)
   })
 
   test("CompleteTest", () => {

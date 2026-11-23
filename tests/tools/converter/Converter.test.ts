@@ -36,7 +36,7 @@ import {
   Color
 } from "../../../src/ProtobufDefinitions"
 import { SensorBuilder } from "../../../src"
-import { Converter, DataBuilder, DataCompressor, DataForm, MetadataBuilder } from "../../../src"
+import { Converter, DataBuilder, DataCompressor, DataForm, DataPb, InvalidDataException, MetadataBuilder, WrongValueException } from "../../../src"
 
 describe("ConverterTest", () => {
   test("NormalDataTest", () => {
@@ -57,7 +57,7 @@ describe("ConverterTest", () => {
 
     const sensorPPGBlue = new SensorBuilder()
       .withIntValues([1, 2, 3])
-      .withPhotoplethysmographColor(Color.BLUE)
+      .withPhotoplethysmographColor(Color.BLUE, 1)
       .build()
 
     const sensorPPG700 = new SensorBuilder()
@@ -67,7 +67,7 @@ describe("ConverterTest", () => {
 
     const sensorACC = new SensorBuilder()
       .withIntValues([1, 2, 3])
-      .withAccelerometerType(AccelerometerType.Z_COORDINATE)
+      .withAccelerometerType(AccelerometerType.Z_COORDINATE, 2)
       .build()
 
     const data = new DataBuilder()
@@ -88,183 +88,106 @@ describe("ConverterTest", () => {
     const dataPbConvertedFromCompressedJson = Converter.convertFromJson(compressedJson)
 
     expect(dataPbConvertedFromDecompressedJson).toEqual(dataPbConvertedFromCompressedJson)
+    expect(dataPbConvertedFromDecompressedJson).toEqual(dataPb)
+
+    const sensorsJson = JSON.parse(decompressedJson).sensors
+    expect(sensorsJson[1].photoplethysmograph).toEqual({ color: "BLUE", channel: 1 })
+    expect(sensorsJson[2].photoplethysmograph).toEqual({ wavelengthNm: 700, channel: 0 })
+    expect(sensorsJson[3].accelerometer).toEqual({ type: "Z_COORDINATE", channel: 2 })
   })
 
-  test("ConvertToJsonDecompressedErrorInSensorTypeTest", () => {
-    const timestamps = [10, 20, 30]
-
-    const sensorECG = new SensorBuilder()
-      .withIntValues([1, 2, 3])
-      .withElectrocardiogramChannel(1)
-      .build()
-
-    const data = new DataBuilder()
-      .withSensor(sensorECG)
-      .withTimestamps(timestamps)
-      .build()
-
-    const dataPb = DataCompressor.compress(data)
-
-    dataPb.sensors[0].type.oneofKind = undefined
-
-    expect(() => Converter.convertToJson(dataPb, DataForm.Decompressed)).toThrow("Inspector::validate: Invalid value in variable 'Sensor values must be photoplethysmograph, electrocardiogram or accelerometer'.")
-  })
-
-  test("ConvertToJsonDecompressedErrorInSensorValuesTest", () => {
-    const timestamps = [10, 20, 30]
-
-    const sensorECG = new SensorBuilder()
-      .withIntValues([1, 2, 3])
-      .withElectrocardiogramChannel(1)
-      .build()
-
-    const data = new DataBuilder()
-      .withSensor(sensorECG)
-      .withTimestamps(timestamps)
-      .build()
-
-    const dataPb = DataCompressor.compress(data)
-
-    dataPb.sensors[0].values.oneofKind = undefined
-
-    expect(() => Converter.convertToJson(dataPb, DataForm.Decompressed)).toThrow("Inspector::validate: Invalid value in variable 'Sensor values must be intValuesContainer or doubleValuesContainer'.")
-  })
-
-  test("ConvertToJsonDecompressedErrorInPPGTypeTest", () => {
-    const timestamps = [10, 20, 30]
-
-    const sensorPPG = new SensorBuilder()
-      .withIntValues([1, 2, 3])
-      .withPhotoplethysmographColor(Color.BLUE)
-      .build()
-
-    const data = new DataBuilder()
-      .withSensor(sensorPPG)
-      .withTimestamps(timestamps)
-      .build()
-
-    const dataPb = DataCompressor.compress(data)
-
-    if (dataPb.sensors[0].type.oneofKind === "photoplethysmograph") {
-      dataPb.sensors[0].type.photoplethysmograph.light.oneofKind = undefined
-      expect(() => Converter.convertToJson(dataPb, DataForm.Decompressed)).toThrow("Inspector::validate: Invalid value in variable 'Photoplethysmograph light must be color or wavelengthNm'.")
-    }
-  })
-
-  test("ConvertToJsonCompressedErrorInSensorTypeTest", () => {
-    const timestamps = [10, 20, 30]
-
-    const sensorECG = new SensorBuilder()
-      .withIntValues([1, 2, 3])
-      .withElectrocardiogramChannel(1)
-      .build()
-
-    const data = new DataBuilder()
-      .withSensor(sensorECG)
-      .withTimestamps(timestamps)
-      .build()
-
-    const dataPb = DataCompressor.compress(data)
-
-    dataPb.sensors[0].type.oneofKind = undefined
-
-    expect(() => Converter.convertToJson(dataPb, DataForm.Compressed)).toThrow("Inspector::validate: Invalid value in variable 'Sensor values must be photoplethysmograph, electrocardiogram or accelerometer'.")
-  })
-
-  test("ConvertToJsonCompressedErrorInSensorValuesTest", () => {
-    const timestamps = [10, 20, 30]
-
-    const sensorECG = new SensorBuilder()
-      .withIntValues([1, 2, 3])
-      .withElectrocardiogramChannel(1)
-      .build()
-
-    const data = new DataBuilder()
-      .withSensor(sensorECG)
-      .withTimestamps(timestamps)
-      .build()
-
-    const dataPb = DataCompressor.compress(data)
-
-    dataPb.sensors[0].values.oneofKind = undefined
-
-    expect(() => Converter.convertToJson(dataPb, DataForm.Compressed)).toThrow("Inspector::validate: Invalid value in variable 'Sensor values must be intValuesContainer or doubleValuesContainer'.")
-  })
-
-  test("ConvertToJsonCompressedErrorInPPGTypeTest", () => {
-    const timestamps = [10, 20, 30]
-
-    const sensorPPG = new SensorBuilder()
-      .withIntValues([1, 2, 3])
-      .withPhotoplethysmographColor(Color.BLUE)
-      .build()
-
-    const data = new DataBuilder()
-      .withSensor(sensorPPG)
-      .withTimestamps(timestamps)
-      .build()
-
-    const dataPb = DataCompressor.compress(data)
-
-    if (dataPb.sensors[0].type.oneofKind === "photoplethysmograph") {
-      dataPb.sensors[0].type.photoplethysmograph.light.oneofKind = undefined
-      expect(() => Converter.convertToJson(dataPb, DataForm.Compressed)).toThrow("Inspector::validate: Invalid value in variable 'Photoplethysmograph light must be color or wavelengthNm'.")
-    }
-  })
-
-  test("ConvertFromJsonErrorInSensorTypeTest", () => {
-    const timestamps = [10, 20, 30]
-
-    const sensorECG = new SensorBuilder()
-      .withIntValues([1, 2, 3])
-      .withElectrocardiogramChannel(1)
-      .build()
-
-    const data = new DataBuilder()
-      .withSensor(sensorECG)
-      .withTimestamps(timestamps)
-      .build()
-
-    let dataJson = JSON.stringify(DataCompressor.compress(data))
-    dataJson = dataJson.replace("electrocardiogram", "electrocardiograms")
-
-    expect(() => Converter.convertFromJson(dataJson)).toThrow("Inspector::validate: Invalid value in variable 'Sensor values must be photoplethysmograph, electrocardiogram or accelerometer'.")
-  })
-
-  test("ConvertFromJsonErrorInSensorValuesTest", () => {
-    const timestamps = [10, 20, 30]
-
+  function compressedEcgData(): DataPb {
     const sensor = new SensorBuilder()
       .withIntValues([1, 2, 3])
       .withElectrocardiogramChannel(1)
       .build()
+    return DataCompressor.compress(new DataBuilder().withSensor(sensor).withTimestamps([10, 20, 30]).build())
+  }
 
-    const data = new DataBuilder()
-      .withSensor(sensor)
-      .withTimestamps(timestamps)
-      .build()
-
-    let dataJson = JSON.stringify(DataCompressor.compress(data))
-    dataJson = dataJson.replace("intValue", "itValue")
-
-    expect(() => Converter.convertFromJson(dataJson)).toThrow("Inspector::validate: Invalid value in variable 'Sensor values must be intValuesContainer or doubleValuesContainer'.")
-  })
-
-  test("ConvertFromJsonErrorInPPGTypeTest", () => {
-    const timestamps = [10, 20, 30]
-
-    const sensorPPG = new SensorBuilder()
+  function compressedPpgData(): DataPb {
+    const sensor = new SensorBuilder()
       .withIntValues([1, 2, 3])
       .withPhotoplethysmographColor(Color.BLUE)
       .build()
+    return DataCompressor.compress(new DataBuilder().withSensor(sensor).withTimestamps([10, 20, 30]).build())
+  }
 
-    const data = new DataBuilder()
-      .withSensor(sensorPPG)
-      .withTimestamps(timestamps)
-      .build()
+  test("ConvertToJsonDecompressedWithoutSensorTypeTest", () => {
+    // sensor types are not checked when decompressing, so that legacy files can be read
+    const dataPb = compressedEcgData()
+    dataPb.sensors[0].type = { oneofKind: undefined }
 
-    let dataJson = JSON.stringify(DataCompressor.compress(data))
-    dataJson = dataJson.replace("color", "clor")
-    expect(() => Converter.convertFromJson(dataJson)).toThrow("Inspector::validate: Invalid value in variable 'Photoplethysmograph light must be color or wavelengthNm'.")
+    const json = Converter.convertToJson(dataPb, DataForm.Decompressed)
+    expect(JSON.parse(json).sensors[0]).toEqual({ valuesType: "intValuesContainer", values: [1, 2, 3] })
+
+    // compressing requires a sensor type
+    expect(() => Converter.convertFromJson(json)).toThrow(InvalidDataException)
+  })
+
+  test("ConvertToJsonDecompressedErrorInSensorValuesTest", () => {
+    const dataPb = compressedEcgData()
+    dataPb.sensors[0].values = { oneofKind: undefined }
+    expect(() => Converter.convertToJson(dataPb, DataForm.Decompressed)).toThrow(InvalidDataException)
+  })
+
+  test("ConvertToJsonDecompressedWithoutPPGLightTest", () => {
+    const dataPb = compressedPpgData()
+    if (dataPb.sensors[0].type.oneofKind === "photoplethysmograph") {
+      dataPb.sensors[0].type.photoplethysmograph.light = { oneofKind: undefined }
+    }
+
+    const json = Converter.convertToJson(dataPb, DataForm.Decompressed)
+    expect(JSON.parse(json).sensors[0].photoplethysmograph).toEqual({ channel: 0 })
+    expect(Converter.convertFromJson(json)).toEqual(dataPb)
+  })
+
+  test("ConvertToJsonCompressedWithoutSensorTypeTest", () => {
+    const dataPb = compressedEcgData()
+    dataPb.sensors[0].type = { oneofKind: undefined }
+    expect(Converter.convertFromJson(Converter.convertToJson(dataPb, DataForm.Compressed))).toEqual(dataPb)
+  })
+
+  test("ConvertToJsonCompressedErrorInSensorValuesTest", () => {
+    const dataPb = compressedEcgData()
+    dataPb.sensors[0].values = { oneofKind: undefined }
+    expect(() => Converter.convertToJson(dataPb, DataForm.Compressed)).toThrow(InvalidDataException)
+  })
+
+  test("ConvertToJsonCompressedWithoutPPGLightTest", () => {
+    const dataPb = compressedPpgData()
+    if (dataPb.sensors[0].type.oneofKind === "photoplethysmograph") {
+      dataPb.sensors[0].type.photoplethysmograph.light = { oneofKind: undefined }
+    }
+    expect(Converter.convertFromJson(Converter.convertToJson(dataPb, DataForm.Compressed))).toEqual(dataPb)
+  })
+
+  test("ConvertFromJsonErrorInSensorValuesTest", () => {
+    let dataJson = JSON.stringify(compressedEcgData())
+    dataJson = dataJson.replace("intValue", "itValue")
+    expect(() => Converter.convertFromJson(dataJson)).toThrow(InvalidDataException)
+  })
+
+  test("ConvertFromDecompressedJsonWithoutChannelTest", () => {
+    // decompressed JSON written before the channel fields existed
+    const json = JSON.stringify({
+      timestamps: [10, 20, 30],
+      sensors: [
+        { valuesType: "intValuesContainer", values: [1, 2, 3], photoplethysmograph: { color: "GREEN" } },
+        { valuesType: "intValuesContainer", values: [4, 5, 6], accelerometer: { type: "X_COORDINATE" } }
+      ]
+    })
+    const dataPb = Converter.convertFromJson(json)
+    expect(dataPb.sensors[0].type.oneofKind === "photoplethysmograph" && dataPb.sensors[0].type.photoplethysmograph.channel).toBe(0)
+    expect(dataPb.sensors[1].type.oneofKind === "accelerometer" && dataPb.sensors[1].type.accelerometer.channel).toBe(0)
+  })
+
+  test("ConvertFromJsonUnsafeIntegerTest", () => {
+    // JSON.parse reads integers as number; integers outside of the safe range are rejected
+    const decompressedJson = "{\"timestamps\": [10, 20], \"sensors\": [{\"valuesType\": \"intValuesContainer\", \"values\": [9223372036854775807, 0], \"electrocardiogram\": {\"channel\": 1}}]}"
+    expect(() => Converter.convertFromJson(decompressedJson)).toThrow(WrongValueException)
+
+    const compressedJson = JSON.stringify(compressedEcgData()).replace("[1,1,1]", "[9223372036854775807,1,1]")
+    expect(compressedJson).toContain("9223372036854775807")
+    expect(() => Converter.convertFromJson(compressedJson)).toThrow(WrongValueException)
   })
 })

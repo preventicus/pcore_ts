@@ -33,27 +33,36 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 import * as fs from "fs"
 import { AccelerometerType, Color, DataPb } from "../../../src/ProtobufDefinitions"
-import { Converter, DataBuilder, DataCompressor, DataForm, File, MetadataBuilder, SensorBuilder } from "../../../src"
-import { PcoreVersion } from "../../../dist/gens/pcore/pcoreVersion"
+import { Converter, DataBuilder, DataCompressor, DataDecompressor, DataForm, File, InvalidDataException, MetadataBuilder, SensorBuilder, WrongValueException } from "../../../src"
+import { PcoreVersion } from "@generated/pcoreVersion"
 
 describe("FileTest", () => {
   test("PcoreEmptyDataTest", () => {
+    // empty data is not valid since Pcore 2.1.0 and is not written
     const path = __dirname + "/emptyTest.pcore"
-    const dataPbWrite = DataPb.create()
-    expect(() => File.writePcoreBinary(dataPbWrite, path)).not.toThrow()
-    expect(fs.existsSync(path)).toBe(true)
-    expect(fs.statSync(path).size).toBe(0)
+    fs.rmSync(path, { force: true })
+    expect(() => File.writePcoreBinary(DataPb.create(), path)).toThrow(InvalidDataException)
+    expect(fs.existsSync(path)).toBe(false)
+  })
+
+  test("PcoreReadEmptyFileTest", () => {
+    // an empty file is read without validation, decompressing it fails
+    const path = __dirname + "/emptyFileTest.pcore"
+    fs.writeFileSync(path, "")
 
     const dataPbRead = File.readPcoreBinary(path)
 
     expect(dataPbRead.sensors.length).toBe(0)
     expect(dataPbRead.compressedTimestampsContainer).toBeUndefined()
     expect(dataPbRead.metadata).toBeUndefined()
+    expect(() => DataDecompressor.decompress(dataPbRead)).toThrow(InvalidDataException)
   })
 
-  test("PcoreEmpty2DataTest", () => {
-    const path = __dirname + "/empty2Test.pcore"
-    const data = new DataBuilder().build()
+  test("PcoreMinimalDataTest", () => {
+    // empty data cannot be compressed since Pcore 2.1.0, so the smallest valid data has one timestamp and one sensor
+    const path = __dirname + "/minimalTest.pcore"
+    const sensor = new SensorBuilder().withIntValues([7]).withElectrocardiogramChannel(1).build()
+    const data = new DataBuilder().withTimestamps([1]).withSensor(sensor).build()
     const dataPbWrite = DataCompressor.compress(data)
     expect(() => File.writePcoreBinary(dataPbWrite, path)).not.toThrow()
     expect(fs.existsSync(path)).toBe(true)
@@ -61,13 +70,24 @@ describe("FileTest", () => {
 
     const dataPbRead = File.readPcoreBinary(path)
 
-    expect(dataPbRead.sensors.length).toBe(0)
-    expect(dataPbRead.compressedTimestampsContainer).toBeUndefined()
-    expect(dataPbRead.metadata).toBeDefined()
-    expect(dataPbRead.metadata!.pcoreVersion).toBeDefined()
+    expect(dataPbRead).toEqual(dataPbWrite)
     expect(dataPbRead.metadata!.pcoreVersion!.major).toBe(PcoreVersion.major)
     expect(dataPbRead.metadata!.pcoreVersion!.minor).toBe(PcoreVersion.minor)
     expect(dataPbRead.metadata!.pcoreVersion!.patch).toBe(PcoreVersion.patch)
+  })
+
+  test("PcoreUnsafeIntegerTest", () => {
+    // JavaScript-specific: 64-bit integers outside of the safe integer range cannot be read exactly
+    const path = __dirname + "/unsafeIntegerTest.pcore"
+    const sensor = new SensorBuilder().withIntValues([7]).withElectrocardiogramChannel(1).build()
+    const dataPbWrite = DataCompressor.compress(new DataBuilder().withTimestamps([1]).withSensor(sensor).build())
+    if (dataPbWrite.sensors[0].values.oneofKind === "intValuesContainer") {
+      dataPbWrite.sensors[0].values.intValuesContainer.values = [2 ** 60]
+    }
+    // written without File.writePcoreBinary, which would reject the value
+    fs.writeFileSync(path, DataPb.toBinary(dataPbWrite))
+
+    expect(() => File.readPcoreBinary(path)).toThrow(WrongValueException)
   })
 
   test("PcoreNormalDataTest", () => {
@@ -189,21 +209,10 @@ describe("FileTest", () => {
     expect(dataPbRead.metadata!.pcoreVersion!.major).toBe(PcoreVersion.major)
   })
 
-  test("JsonEmptyDataTest", () => {
-    const path = __dirname + "/emptyTest.pcore.json"
-    const dataJsonWrite = Converter.convertToJson(DataPb.create(), DataForm.Compressed)
-    expect(() => File.writePcoreJson(dataJsonWrite, path)).not.toThrow()
-    expect(fs.existsSync(path)).toBe(true)
-
-    const dataJsonRead = File.readPcoreJson(path)
-
-    expect(dataJsonWrite).toBe(dataJsonRead)
-  })
-
-  test("JsonEmpty2DataTest", () => {
-    const path = __dirname + "/emptyTest2.pcore.json"
-    const data = new DataBuilder().build()
-    const dataPbWrite = DataCompressor.compress(data)
+  test("JsonMinimalDataTest", () => {
+    const path = __dirname + "/minimalTest.pcore.json"
+    const sensor = new SensorBuilder().withIntValues([7]).withElectrocardiogramChannel(1).build()
+    const dataPbWrite = DataCompressor.compress(new DataBuilder().withTimestamps([1]).withSensor(sensor).build())
     const dataJsonWrite = Converter.convertToJson(dataPbWrite, DataForm.Compressed)
     expect(() => File.writePcoreJson(dataJsonWrite, path)).not.toThrow()
     expect(fs.existsSync(path)).toBe(true)

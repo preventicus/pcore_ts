@@ -34,7 +34,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 import { TimestampsCompressor } from "@/compress/TimestampsCompressor"
 
 describe("TimestampsCompressor", () => {
-  test("ZeroTimestampTest", () => {
+  test("EmptyTimestampsTest", () => {
     const unixTimestamps: number[] = []
 
     const compressed = TimestampsCompressor.compress(unixTimestamps)
@@ -185,6 +185,16 @@ describe("TimestampsCompressor", () => {
     expect(compressed.sectionsSizes).toEqual([2, 2, 1])
     expect(compressed.innerSectionsDurationsMs).toEqual([10, 30, 0])
     expect(compressed.outerSectionsDurationsMs).toEqual([0, 30, 70])
+  })
+
+  test("LargeInnerSectionDurationTest", () => {
+    const timestamps = [1, 3000000001]
+    const compressed = TimestampsCompressor.compress(timestamps)
+
+    expect(compressed.firstUnixTimestampMs).toBe(1)
+    expect(compressed.sectionsSizes).toEqual([2])
+    expect(compressed.innerSectionsDurationsMs).toEqual([3000000000])
+    expect(compressed.outerSectionsDurationsMs).toEqual([0])
   })
 
   test("RealDataTest", () => {

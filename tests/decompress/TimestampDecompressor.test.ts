@@ -45,12 +45,12 @@ function fillCompressedTimestampsContainerPb(fistUnixTimestamp: UnixTimestamp, i
 }
 
 describe("TimestampsDecompressor", () => {
-  test("ZeroTimestampTest", () => {
+  test("EmptyTimestampsTest", () => {
     const compressedTimestampsContainer = fillCompressedTimestampsContainerPb(
       0,
-      [0],
-      [0],
-      [0]
+      [],
+      [],
+      []
     )
     const decompressed = TimestampsDecompressor.decompress(compressedTimestampsContainer)
     expect(decompressed.length).toBe(0)
@@ -198,6 +198,18 @@ describe("TimestampsDecompressor", () => {
     const decompressed = TimestampsDecompressor.decompress(compressedTimestampsContainer)
     expect(decompressed.length).toBe(5)
     expect(decompressed).toEqual([1000, 1010, 1030, 1060, 1100])
+  })
+
+  test("LargeInnerSectionDurationTest", () => {
+    const compressedTimestampsContainer = fillCompressedTimestampsContainerPb(
+      1,
+      [3000000000],
+      [0],
+      [2]
+    )
+    const decompressed = TimestampsDecompressor.decompress(compressedTimestampsContainer)
+    expect(decompressed.length).toBe(2)
+    expect(decompressed).toEqual([1, 3000000001])
   })
 
   test("RealDataTest", () => {

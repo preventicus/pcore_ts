@@ -36,6 +36,7 @@ import {
   Color,
   DataPb,
   Metadata,
+  Photoplethysmograph,
   Sensor
 } from "../../ProtobufDefinitions"
 import { DataCompressor } from "../../compress/DataCompressor"
@@ -45,43 +46,37 @@ import { DataForm } from "./DataForm"
 import { UnixTimestamps } from "../../models/UnixTimestamp"
 import { Inspector } from "@tools/inspector/Inspector"
 
-interface DecompressedPhotoplethysmographWavelengthSensorJson {
+interface DecompressedSensorWithoutTypeJson {
     valuesType: string,
-    values: number[],
+    values: number[]
+}
+
+interface DecompressedPhotoplethysmographSensorJson extends DecompressedSensorWithoutTypeJson {
     photoplethysmograph: {
-        wavelengthNm: number
+        wavelengthNm?: number,
+        color?: string,
+        channel?: number
     }
 }
 
-interface DecompressedPhotoplethysmographColorSensorJson {
-    valuesType: string,
-    values: number[],
-    photoplethysmograph: {
-        color: string
-    }
-}
-
-interface DecompressedAccelerometerSensorJson {
-    valuesType: string,
-    values: number[],
+interface DecompressedAccelerometerSensorJson extends DecompressedSensorWithoutTypeJson {
     accelerometer: {
-        type: string
+        type: string,
+        channel?: number
     }
 }
 
-interface DecompressedElectrocardiogramSensorJson {
-    valuesType: string,
-    values: number[],
+interface DecompressedElectrocardiogramSensorJson extends DecompressedSensorWithoutTypeJson {
     electrocardiogram: {
         channel: number
     }
 }
 
 type DecompressedSensor =
-      DecompressedPhotoplethysmographWavelengthSensorJson
-    | DecompressedPhotoplethysmographColorSensorJson
+      DecompressedPhotoplethysmographSensorJson
     | DecompressedAccelerometerSensorJson
     | DecompressedElectrocardiogramSensorJson
+    | DecompressedSensorWithoutTypeJson
 
 interface DecompressedPcoreJson {
     metadata?: Metadata,
@@ -152,9 +147,12 @@ export class Converter {
   /**
      * Converts a Sensor protobuf object into a decompressed JSON representation.
      *
+     * Sensors without a sensor type or photoplethysmographs without light can occur in
+     * decompressed legacy files; they are written without the missing parts.
+     *
      * @param sensor - The Sensor protobuf object.
      * @returns A DecompressedSensor JSON object.
-     * @throws {Error} If the sensor type or value type is unsupported.
+     * @throws {Error} If the value type is unsupported.
      */
   private static parseToDecompressedSensor(sensor: Sensor): DecompressedSensor {
     let values: number[] = []
@@ -173,47 +171,35 @@ export class Converter {
         throw new Error(`Unsupported sensor value type: ${sensor.values.oneofKind}`)
       }
     }
+    const valuesType = sensor.values.oneofKind
 
     switch (sensor.type.oneofKind) {
       case "accelerometer": {
         return {
-          valuesType: sensor.values.oneofKind,
+          valuesType,
           values,
           accelerometer: {
-            type: AccelerometerType[sensor.type.accelerometer.type]
+            type: AccelerometerType[sensor.type.accelerometer.type],
+            channel: sensor.type.accelerometer.channel
           }
         } satisfies DecompressedAccelerometerSensorJson
       }
       case "photoplethysmograph": {
-        switch (sensor.type.photoplethysmograph.light.oneofKind) {
-          case "wavelengthNm": {
-            return {
-              valuesType: sensor.values.oneofKind,
-              values,
-              photoplethysmograph: {
-                wavelengthNm: sensor.type.photoplethysmograph.light.wavelengthNm,
-              }
-            } satisfies DecompressedPhotoplethysmographWavelengthSensorJson
+        const photoplethysmograph = sensor.type.photoplethysmograph
+        const light = photoplethysmograph.light
+        return {
+          valuesType,
+          values,
+          photoplethysmograph: {
+            ...(light.oneofKind === "wavelengthNm" ? { wavelengthNm: light.wavelengthNm } : {}),
+            ...(light.oneofKind === "color" ? { color: Color[light.color] } : {}),
+            channel: photoplethysmograph.channel
           }
-          case "color": {
-            return {
-              valuesType: sensor.values.oneofKind,
-              values,
-              photoplethysmograph: {
-                color: Color[sensor.type.photoplethysmograph.light.color],
-              }
-            } satisfies DecompressedPhotoplethysmographColorSensorJson
-          }
-          default: {
-            /* istanbul ignore next */
-            // currently unreachable code since validator capture this error before
-            throw new Error(`Unsupported sensor photoplethysmograph type: ${sensor.type.photoplethysmograph.light.oneofKind}`)
-          }
-        }
+        } satisfies DecompressedPhotoplethysmographSensorJson
       }
       case "electrocardiogram": {
         return {
-          valuesType: sensor.values.oneofKind,
+          valuesType,
           values,
           electrocardiogram: {
             channel: sensor.type.electrocardiogram.channel
@@ -221,9 +207,7 @@ export class Converter {
         } satisfies DecompressedElectrocardiogramSensorJson
       }
       default: {
-        /* istanbul ignore next */
-        // currently unreachable code since validator capture this error before
-        throw new Error(`Unsupported sensor type: ${sensor.type.oneofKind}`)
+        return { valuesType, values } satisfies DecompressedSensorWithoutTypeJson
       }
     }
   }
@@ -231,9 +215,12 @@ export class Converter {
   /**
      * Converts a decompressed JSON representation of a sensor back into a Sensor protobuf object.
      *
+     * Missing `channel` fields (e.g. in JSON written before they existed) default to 0.
+     * A sensor without sensor type is converted as such and rejected by the validation in `DataCompressor.compress`.
+     *
      * @param sensor - The decompressed sensor JSON object.
      * @returns A Sensor protobuf object.
-     * @throws {Error} If the sensor type or value type is unsupported.
+     * @throws {Error} If the value type is unsupported.
      */
   private static parseFromDecompressedSensor(sensor: DecompressedSensor): Sensor {
     const values: Sensor["values"] = (() => {
@@ -252,12 +239,13 @@ export class Converter {
       }
     })()
 
-    let type: Sensor["type"]
+    let type: Sensor["type"] = { oneofKind: undefined }
     if ("accelerometer" in sensor) {
       type = {
         oneofKind: "accelerometer",
         accelerometer: {
-          type: AccelerometerType[sensor.accelerometer.type as keyof typeof AccelerometerType]
+          type: AccelerometerType[sensor.accelerometer.type as keyof typeof AccelerometerType],
+          channel: sensor.accelerometer.channel ?? 0
         }
       }
     } else if ("electrocardiogram" in sensor) {
@@ -267,26 +255,17 @@ export class Converter {
       }
     } else if ("photoplethysmograph" in sensor) {
       const photoplethysmograph = sensor.photoplethysmograph
-      if ("color" in photoplethysmograph) {
-        const colorEnum = photoplethysmograph.color in Color ? Color[photoplethysmograph.color as keyof typeof Color] : Color.UNSPECIFIED
-        type = {
-          oneofKind: "photoplethysmograph",
-          photoplethysmograph: { light: { oneofKind: "color", color: colorEnum } }
-        }
-      } else if ("wavelengthNm" in photoplethysmograph) {
-        type = {
-          oneofKind: "photoplethysmograph",
-          photoplethysmograph: { light: { oneofKind: "wavelengthNm", wavelengthNm: photoplethysmograph.wavelengthNm } }
-        }
-      } else {
-        /* istanbul ignore next */
-        // currently unreachable code since validator capture this error before
-        throw new Error("Unsupported photoplethysmograph type")
+      let light: Photoplethysmograph["light"] = { oneofKind: undefined }
+      if (photoplethysmograph.color !== undefined) {
+        const color = photoplethysmograph.color in Color ? Color[photoplethysmograph.color as keyof typeof Color] : Color.UNSPECIFIED
+        light = { oneofKind: "color", color }
+      } else if (photoplethysmograph.wavelengthNm !== undefined) {
+        light = { oneofKind: "wavelengthNm", wavelengthNm: photoplethysmograph.wavelengthNm }
       }
-    } else {
-      /* istanbul ignore next */
-      // currently unreachable code since validator capture this error before
-      throw new Error("Unsupported sensor type")
+      type = {
+        oneofKind: "photoplethysmograph",
+        photoplethysmograph: { light, channel: photoplethysmograph.channel ?? 0 }
+      }
     }
     return { values, type }
   }

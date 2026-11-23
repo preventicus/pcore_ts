@@ -37,8 +37,7 @@ import { PcoreVersion } from "../../src/generated/pcore/pcoreVersion"
 import { SensorBuilder } from "../../src"
 import { MetadataBuilder } from "../../src"
 import { getIntValues, getDoubleValues, getAccelerometerType, getPhotoplethysmographWavelength, getPhotoplethysmographColor, getElectrocardiogramChannel } from "../../src/util/utils"
-import { DataDecompressor } from "../../src"
-import { Data } from "../../src/generated/pcore/pcore"
+import { Data, DataDecompressor, InvalidDataException, WrongValueException } from "../../src"
 
 describe("DataDecompressorTest", () => {
   test("EmptyWithoutDecompressorTest", () => {
@@ -48,111 +47,181 @@ describe("DataDecompressorTest", () => {
     expect(data.sensors.length).toBe(0)
   })
 
+  // Sensors given as "int_values" / "double_values" in the spec get a sensor type that is valid and unique within the test
+  function intSensor(values: number[]): Sensor {
+    return new SensorBuilder().withIntValues(values).withElectrocardiogramChannel(1).build()
+  }
+
+  function doubleSensor(values: number[]): Sensor {
+    return new SensorBuilder().withDoubleValues(values).withElectrocardiogramChannel(2).build()
+  }
+
+  interface Timestamps {
+    first: number,
+    sizes: number[],
+    inner: number[],
+    outer: number[]
+  }
+
+  function decompress(timestamps: Timestamps | undefined, sensors: Sensor[], timezoneOffsetMin?: number): Data {
+    const dataPb: DataPb = {
+      metadata: timezoneOffsetMin === undefined ? undefined : new MetadataBuilder().withTimezoneOffset(timezoneOffsetMin).build(),
+      compressedTimestampsContainer: timestamps === undefined ? undefined : {
+        firstUnixTimestampMs: timestamps.first,
+        sectionsSizes: timestamps.sizes,
+        innerSectionsDurationsMs: timestamps.inner,
+        outerSectionsDurationsMs: timestamps.outer
+      },
+      sensors
+    }
+    return DataDecompressor.decompress(dataPb)
+  }
+
   test("EmptyWithDecompressorTest", () => {
-    const dataPb = Data.create()
-    const data = DataDecompressor.decompress(dataPb)
-    expect(data.metadata).toBeUndefined()
-    expect(data.timestamps.length).toBe(0)
-    expect(data.sensors.length).toBe(0)
+    // empty data is not valid since Pcore 2.1.0 (decompression rule 1)
+    expect(() => DataDecompressor.decompress(DataPb.create())).toThrow(InvalidDataException)
   })
 
   test("MissingUnixTimestampsTest", () => {
-    const sensor = new SensorBuilder()
-      .withIntValues([0, 3, 1, 3, 2])
-      .build()
-
-    const dataPb : DataPb = {
-      metadata: undefined,
-      compressedTimestampsContainer: undefined,
-      sensors: [sensor]
-    }
-
-    expect(() => DataDecompressor.decompress(dataPb)).toThrow(
-      "Data must hold compressed timestamps if it has sensor data"
-    )
+    expect(() => decompress(undefined, [intSensor([1, 2, 3])])).toThrow(InvalidDataException)
   })
 
   test("MissingSensorTest", () => {
-    const dataPb : DataPb = {
-      metadata: undefined,
-      compressedTimestampsContainer: {
-        firstUnixTimestampMs: 1,
-        innerSectionsDurationsMs: [2, 1],
-        outerSectionsDurationsMs: [0, 6],
-        sectionsSizes: [4, 3]
-      },
-      sensors: []
-    }
-    expect(() => DataDecompressor.decompress(dataPb)).toThrow(
-      "Data must have sensor data if it holds compressed timestamps"
-    )
+    expect(() => decompress({ first: 1, sizes: [3], inner: [2], outer: [0] }, [])).toThrow(InvalidDataException)
   })
 
-  test("DifferentNumberSensorIntValuesTest", () => {
-    const sensor = new SensorBuilder()
-      .withIntValues([3, 1, 3, 2])
-      .build()
-
-    const dataPb : DataPb = {
-      metadata: undefined,
-      compressedTimestampsContainer: {
-        firstUnixTimestampMs: 1,
-        innerSectionsDurationsMs: [2, 1],
-        outerSectionsDurationsMs: [0, 6],
-        sectionsSizes: [4, 3]
-      },
-      sensors: [sensor]
-    }
-
-    expect(() => DataDecompressor.decompress(dataPb)).toThrow(
-      "Number of unix timestamps should be equal to the number of data points"
-    )
+  test("EmptyTimestampsContainerTest", () => {
+    expect(() => decompress({ first: 1, sizes: [], inner: [], outer: [] }, [intSensor([])])).toThrow(InvalidDataException)
   })
 
-  test("DifferentNumberSensorDoubleValuesTest", () => {
-    const sensor = new SensorBuilder()
-      .withDoubleValues([3, 1, 3, 2, 7, 6, 4])
-      .build()
-
-    const dataPb : DataPb = {
-      metadata: undefined,
-      compressedTimestampsContainer: {
-        firstUnixTimestampMs: 1,
-        innerSectionsDurationsMs: [2, 1],
-        outerSectionsDurationsMs: [0, 6],
-        sectionsSizes: [4, 5]
-      },
-      sensors: [sensor]
-    }
-
-    expect(() => DataDecompressor.decompress(dataPb)).toThrow(
-      "Number of unix timestamps should be equal to the number of data points"
-    )
+  test("TooLongInnerSectionsDurationsTest", () => {
+    expect(() => decompress({ first: 1, sizes: [3], inner: [2, 2], outer: [0] }, [intSensor([1, 2, 3])])).toThrow(InvalidDataException)
   })
 
-  test("DifferentNumberSensorMixedValuesTest", () => {
-    const sensorInt = new SensorBuilder()
-      .withIntValues([3, 1, 3, 2, 7, 6, 4])
-      .build()
+  test("TooLongOuterSectionsDurationsTest", () => {
+    expect(() => decompress({ first: 1, sizes: [3], inner: [2], outer: [0, 10] }, [intSensor([1, 2, 3])])).toThrow(InvalidDataException)
+  })
 
-    const sensorDouble = new SensorBuilder()
-      .withIntValues([3, 1, 3, 2, 7, 6, 4])
-      .build()
+  test("TooLongSectionsSizesTest", () => {
+    expect(() => decompress({ first: 1, sizes: [3, 3], inner: [2], outer: [0] }, [intSensor([1, 2, 3, 4, 5, 6])])).toThrow(InvalidDataException)
+  })
 
-    const dataPb : DataPb = {
-      metadata: undefined,
-      compressedTimestampsContainer: {
-        firstUnixTimestampMs: 1,
-        innerSectionsDurationsMs: [2, 1],
-        outerSectionsDurationsMs: [0, 6],
-        sectionsSizes: [4, 5]
-      },
-      sensors: [sensorInt, sensorDouble]
-    }
+  test("SensorIntValueCountMismatchTest", () => {
+    expect(() => decompress({ first: 1, sizes: [5], inner: [2], outer: [0] }, [intSensor([3, 2])])).toThrow(InvalidDataException)
+  })
 
-    expect(() => DataDecompressor.decompress(dataPb)).toThrow(
-      "Number of unix timestamps should be equal to the number of data points"
-    )
+  test("SensorDoubleValueCountMismatchTest", () => {
+    expect(() => decompress({ first: 1, sizes: [5], inner: [2], outer: [0] }, [doubleSensor([3.1, 2.2])])).toThrow(InvalidDataException)
+  })
+
+  test("SectionsSizesSumOverflowTest", () => {
+    expect(() => decompress({ first: 1, sizes: [4294967295, 4], inner: [1, 1], outer: [0, 4294967295] }, [intSensor([1, 1, 1])])).toThrow(InvalidDataException)
+  })
+
+  test("OuterSectionDurationFirstValueTest", () => {
+    expect(() => decompress({ first: 1, sizes: [1], inner: [0], outer: [10] }, [doubleSensor([3.1])])).toThrow(InvalidDataException)
+  })
+
+  test("OuterSectionDurationValueTest", () => {
+    expect(() => decompress({ first: 1, sizes: [1, 1], inner: [0, 0], outer: [0, 0] }, [doubleSensor([3.1, 2.2])])).toThrow(InvalidDataException)
+  })
+
+  test("OverlappingSectionsTest", () => {
+    expect(() => decompress({ first: 1, sizes: [4, 4], inner: [1, 1], outer: [0, 2] }, [intSensor([1, 1, 1, 1, 1, 1, 1, 1])])).toThrow(InvalidDataException)
+  })
+
+  test("TouchingSectionsTest", () => {
+    expect(() => decompress({ first: 1, sizes: [4, 4], inner: [1, 1], outer: [0, 3] }, [intSensor([1, 1, 1, 1, 1, 1, 1, 1])])).toThrow(InvalidDataException)
+  })
+
+  test("OverlappingSectionsOverflowTest", () => {
+    expect(() => decompress({ first: 1, sizes: [3, 1], inner: [2147483648, 0], outer: [0, 1] }, [intSensor([1, 1, 1, 1])])).toThrow(InvalidDataException)
+  })
+
+  test("InnerSectionDurationZeroTest", () => {
+    expect(() => decompress({ first: 1, sizes: [2, 1], inner: [0, 0], outer: [0, 1] }, [doubleSensor([3.1, 2.2, 1.3])])).toThrow(InvalidDataException)
+  })
+
+  test("InnerSectionDurationSingleTimestampTest", () => {
+    expect(() => decompress({ first: 1, sizes: [1], inner: [2], outer: [0] }, [doubleSensor([3.1])])).toThrow(InvalidDataException)
+  })
+
+  test("InnerSectionDurationSingleTimestampLastSectionTest", () => {
+    expect(() => decompress({ first: 1, sizes: [2, 1], inner: [2, 3], outer: [0, 5] }, [doubleSensor([3.1, 2.2, 1.3])])).toThrow(InvalidDataException)
+  })
+
+  test("ValidSingleTimestampLastSectionTest", () => {
+    const data = decompress({ first: 1, sizes: [2, 1], inner: [2, 0], outer: [0, 5] }, [doubleSensor([3.1, 2.2, 1.3])])
+    expect(data.timestamps).toEqual([1, 3, 6])
+  })
+
+  test("ValidSingleTimestampFirstSectionTest", () => {
+    const data = decompress({ first: 1, sizes: [1, 3], inner: [0, 1], outer: [0, 5] }, [doubleSensor([3.1, 2.2, 1.3, 0.4])])
+    expect(data.timestamps).toEqual([1, 6, 7, 8])
+  })
+
+  test("SectionsSizesZeroTest", () => {
+    expect(() => decompress({ first: 1, sizes: [2, 0], inner: [2, 2], outer: [0, 5] }, [doubleSensor([3.1, 2.2])])).toThrow(InvalidDataException)
+  })
+
+  test("IntValueOverflowTest", () => {
+    // The spec uses the int64 maximum. This library stores 64-bit integers as number,
+    // so the limit is Number.MAX_SAFE_INTEGER.
+    expect(() => decompress({ first: 1, sizes: [2], inner: [1], outer: [0] }, [intSensor([Number.MAX_SAFE_INTEGER, 1])])).toThrow(WrongValueException)
+  })
+
+  test("UnsafeIntValueTest", () => {
+    // JavaScript-specific: 64-bit integers are stored as number and must be safe integers
+    expect(() => decompress({ first: 1, sizes: [2], inner: [1], outer: [0] }, [intSensor([2 ** 53, 0])])).toThrow(WrongValueException)
+  })
+
+  test("UnsafeUnixTimestampTest", () => {
+    // JavaScript-specific: the decompressed timestamps must be safe integers
+    expect(() => decompress({ first: Number.MAX_SAFE_INTEGER, sizes: [2], inner: [1], outer: [0] }, [intSensor([1, 2])])).toThrow(WrongValueException)
+    expect(() => decompress({ first: Number.MAX_SAFE_INTEGER - 1, sizes: [2], inner: [1], outer: [0] }, [intSensor([1, 2])])).not.toThrow()
+  })
+
+  test("NonFiniteDoubleValueTest", () => {
+    // not covered by the spec test cases, because JSON cannot represent NaN and Infinity
+    const timestamps = { first: 1, sizes: [3], inner: [1], outer: [0] }
+    expect(() => decompress(timestamps, [doubleSensor([1, NaN, 3])])).toThrow(WrongValueException)
+    expect(() => decompress(timestamps, [doubleSensor([1, Infinity, 3])])).toThrow(WrongValueException)
+    expect(() => decompress(timestamps, [doubleSensor([1, -Infinity, 3])])).toThrow(WrongValueException)
+  })
+
+  test("WrongTimeZoneOffsetNegativeTest", () => {
+    expect(() => decompress({ first: 1, sizes: [3], inner: [1], outer: [0] }, [intSensor([1, 1, 1])], -721)).toThrow(WrongValueException)
+  })
+
+  test("WrongTimeZoneOffsetPositiveTest", () => {
+    expect(() => decompress({ first: 1, sizes: [3], inner: [1], outer: [0] }, [intSensor([1, 1, 1])], 841)).toThrow(WrongValueException)
+  })
+
+  test("LegacyDuplicatePpgSensorTest", () => {
+    const sensors = [
+      new SensorBuilder().withIntValues([1, 1, 1]).withPhotoplethysmographColor(Color.GREEN).build(),
+      new SensorBuilder().withIntValues([2, 2, 2]).withPhotoplethysmographColor(Color.GREEN).build()
+    ]
+    const data = decompress({ first: 1, sizes: [3], inner: [1], outer: [0] }, sensors)
+    expect(getIntValues(data.sensors[0])).toEqual([1, 2, 3])
+    expect(getIntValues(data.sensors[1])).toEqual([2, 4, 6])
+  })
+
+  test("LegacyDuplicateAccSensorTest", () => {
+    const sensors = [
+      new SensorBuilder().withIntValues([1, 1, 1]).withAccelerometerType(AccelerometerType.X_COORDINATE).build(),
+      new SensorBuilder().withIntValues([2, 2, 2]).withAccelerometerType(AccelerometerType.X_COORDINATE).build()
+    ]
+    const data = decompress({ first: 1, sizes: [3], inner: [1], outer: [0] }, sensors)
+    expect(getIntValues(data.sensors[0])).toEqual([1, 2, 3])
+    expect(getIntValues(data.sensors[1])).toEqual([2, 4, 6])
+  })
+
+  test("MissingSensorTypeTest", () => {
+    // sensor types are intentionally not checked when decompressing
+    const sensor = new SensorBuilder().withIntValues([1, 1, 1]).build()
+    const data = decompress({ first: 1, sizes: [3], inner: [1], outer: [0] }, [sensor])
+    expect(data.sensors[0].type.oneofKind).toBeUndefined()
   })
 
   test("MetaDataTest", () => {
@@ -164,11 +233,18 @@ describe("DataDecompressorTest", () => {
       .withDeviceFirmwareVersion(3, 4, 1)
       .build()
 
-    const data = new DataBuilder()
-      .withMetadata(metaData)
-      .build()
+    const dataPb: DataPb = {
+      metadata: metaData,
+      compressedTimestampsContainer: {
+        firstUnixTimestampMs: 1,
+        sectionsSizes: [1],
+        innerSectionsDurationsMs: [0],
+        outerSectionsDurationsMs: [0]
+      },
+      sensors: [intSensor([5])]
+    }
 
-    const decompressed = DataDecompressor.decompress(data)
+    const decompressed = DataDecompressor.decompress(dataPb)
 
     expect(decompressed.metadata).toBeDefined()
     expect(decompressed.metadata?.device).toBeDefined()
