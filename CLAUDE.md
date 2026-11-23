@@ -26,7 +26,7 @@ npm run example:converter
 npm run example:inspector
 ```
 
-`npm run build` runs `generate:proto` first, which clones `github.com/preventicus/pcore` over the network and **deletes and recreates `src/generated/pcore/`**. For a normal edit-test cycle use `npm test` / `npx tsc` directly rather than `npm run build`. The `prepare` script (`tsc && tsc-alias`, no proto generation) runs on every `npm install`, so a type error breaks installs too.
+`npm run build` runs `generate:proto` first, which clones `github.com/preventicus/pcore` over the network and **deletes and recreates `src/generated/pcore/`**. For a normal edit-test cycle use `npm test` / `npx tsc` directly rather than `npm run build`. `npm run clean` empties `dist/`; `build` and `prepare` run it before `tsc`, so no stale files from removed sources survive. The `prepare` script (`clean`, `tsc`, `tsc-alias`, no proto generation) runs on every `npm install`, so a type error breaks installs too. The `files` field in `package.json` publishes only `dist/` without the compiled examples (`dist/example`); check the package contents with `npm pack --dry-run`.
 
 ## The spec repo (`../pcore`)
 
