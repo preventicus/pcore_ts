@@ -1,0 +1,10 @@
+
+.idea/
+node_modules/
+coverage/
+dist/
+
+*.pcore
+*.pcore.json
+
+.DS_Store
