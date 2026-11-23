@@ -77,7 +77,7 @@ export function getPhotoplethysmographColor(sensor: Sensor): Color | undefined {
   return undefined
 }
 
-export function getPhotoplethysmographWavelength(sensor: Sensor): Color | undefined {
+export function getPhotoplethysmographWavelength(sensor: Sensor): number | undefined {
   if (sensor.type.oneofKind === "photoplethysmograph") {
     if (sensor.type.photoplethysmograph.light.oneofKind === "wavelengthNm") {
       return sensor.type.photoplethysmograph.light.wavelengthNm
