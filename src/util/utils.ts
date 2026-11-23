@@ -31,60 +31,99 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 */
 
-import { AccelerometerType, Color, Sensor } from "../ProtobufDefinitions"
+import { AccelerometerType, Color, Sensor } from "@/ProtobufDefinitions"
 
+/*
+ * Accessors that unwrap the protobuf `oneof` unions of a sensor. They are the only place in the
+ * library that distinguishes the cases of `Sensor.values` and the light of a photoplethysmograph,
+ * and they return `undefined` if the sensor holds a different case.
+ */
+
+/**
+ * Returns the integer values of a sensor.
+ * @param sensor - The sensor.
+ * @returns The integer values, or `undefined` if the sensor does not hold integer values.
+ */
 export function getIntValues(sensor: Sensor): number[] | undefined {
-  if (sensor.values.oneofKind === "intValuesContainer") {
-    return sensor.values.intValuesContainer.values
-  }
-  /* istanbul ignore next */
-  return undefined
+  return sensor.values.oneofKind === "intValuesContainer" ? sensor.values.intValuesContainer.values : undefined
 }
 
+/**
+ * Returns the double values of a sensor.
+ * @param sensor - The sensor.
+ * @returns The double values, or `undefined` if the sensor does not hold double values.
+ */
 export function getDoubleValues(sensor: Sensor): number[] | undefined {
-  if (sensor.values.oneofKind === "doubleValuesContainer") {
-    return sensor.values.doubleValuesContainer.values
-  }
-  /* istanbul ignore next */
-  return undefined
+  return sensor.values.oneofKind === "doubleValuesContainer" ? sensor.values.doubleValuesContainer.values : undefined
 }
 
+/**
+ * Returns the values of a sensor, regardless of whether they are integer or double values.
+ * @param sensor - The sensor.
+ * @returns The values, or `undefined` if the sensor holds no values container.
+ */
+export function getValues(sensor: Sensor): number[] | undefined {
+  return getIntValues(sensor) ?? getDoubleValues(sensor)
+}
+
+/**
+ * Returns the type of an accelerometer.
+ * @param sensor - The sensor.
+ * @returns The accelerometer type, or `undefined` if the sensor is not an accelerometer.
+ */
 export function getAccelerometerType(sensor: Sensor): AccelerometerType | undefined {
-  if (sensor.type.oneofKind === "accelerometer") {
-    return sensor.type.accelerometer.type
-  }
-  /* istanbul ignore next */
-  return undefined
+  return sensor.type.oneofKind === "accelerometer" ? sensor.type.accelerometer.type : undefined
 }
 
+/**
+ * Returns the channel of an accelerometer.
+ * @param sensor - The sensor.
+ * @returns The channel, or `undefined` if the sensor is not an accelerometer.
+ */
+export function getAccelerometerChannel(sensor: Sensor): number | undefined {
+  return sensor.type.oneofKind === "accelerometer" ? sensor.type.accelerometer.channel : undefined
+}
+
+/**
+ * Returns the channel of an electrocardiogram.
+ * @param sensor - The sensor.
+ * @returns The channel, or `undefined` if the sensor is not an electrocardiogram.
+ */
 export function getElectrocardiogramChannel(sensor: Sensor): number | undefined {
-  if (sensor.type.oneofKind === "electrocardiogram") {
-    return sensor.type.electrocardiogram.channel
-  }
-  /* istanbul ignore next */
-  return undefined
+  return sensor.type.oneofKind === "electrocardiogram" ? sensor.type.electrocardiogram.channel : undefined
 }
 
+/**
+ * Returns the color of a camera-based photoplethysmograph.
+ * @param sensor - The sensor.
+ * @returns The color, or `undefined` if the sensor is not a photoplethysmograph with a color.
+ */
 export function getPhotoplethysmographColor(sensor: Sensor): Color | undefined {
-  if (sensor.type.oneofKind === "photoplethysmograph") {
-    if (sensor.type.photoplethysmograph.light.oneofKind === "color") {
-      return sensor.type.photoplethysmograph.light.color
-    }
-    /* istanbul ignore next */
+  if (sensor.type.oneofKind !== "photoplethysmograph") {
     return undefined
   }
-  /* istanbul ignore next */
-  return undefined
+  const light = sensor.type.photoplethysmograph.light
+  return light.oneofKind === "color" ? light.color : undefined
 }
 
+/**
+ * Returns the wavelength of an LED-based photoplethysmograph.
+ * @param sensor - The sensor.
+ * @returns The wavelength in nanometers, or `undefined` if the sensor is not a photoplethysmograph with a wavelength.
+ */
 export function getPhotoplethysmographWavelength(sensor: Sensor): number | undefined {
-  if (sensor.type.oneofKind === "photoplethysmograph") {
-    if (sensor.type.photoplethysmograph.light.oneofKind === "wavelengthNm") {
-      return sensor.type.photoplethysmograph.light.wavelengthNm
-    }
-    /* istanbul ignore next */
+  if (sensor.type.oneofKind !== "photoplethysmograph") {
     return undefined
   }
-  /* istanbul ignore next */
-  return undefined
+  const light = sensor.type.photoplethysmograph.light
+  return light.oneofKind === "wavelengthNm" ? light.wavelengthNm : undefined
+}
+
+/**
+ * Returns the channel of a photoplethysmograph.
+ * @param sensor - The sensor.
+ * @returns The channel, or `undefined` if the sensor is not a photoplethysmograph.
+ */
+export function getPhotoplethysmographChannel(sensor: Sensor): number | undefined {
+  return sensor.type.oneofKind === "photoplethysmograph" ? sensor.type.photoplethysmograph.channel : undefined
 }

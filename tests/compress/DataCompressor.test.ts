@@ -86,6 +86,12 @@ describe("DataCompressorTest", () => {
     expect(() => compress([1, 2, 3, 4, 5], [doubleSensor([3, 1, 3, 2, 7]), intSensor([3, 1, 3, 2, 7, 6, 4])])).toThrow(InvalidDataException)
   })
 
+  test("SensorWithoutValuesTest", () => {
+    // a sensor without values container has no values, so the number of values does not match
+    const sensor = new SensorBuilder().withElectrocardiogramChannel(1).build()
+    expect(() => compress([1, 2, 3], [sensor])).toThrow(InvalidDataException)
+  })
+
   test("WrongTimeZoneOffsetNegativeTest", () => {
     expect(() => compress([1, 2, 3], [intSensor([1, 2, 3])], -721)).toThrow(WrongValueException)
   })

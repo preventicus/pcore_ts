@@ -127,6 +127,12 @@ describe("InspectorTest", () => {
     expect(Inspector.getNumberOfElements(dataPb)).toBe(3)
   })
 
+  test("GetNumberOfElementsWithoutValuesTest", () => {
+    const sensor = new SensorBuilder().withElectrocardiogramChannel(1).build()
+    const dataPb = DataPb.create({ sensors: [sensor] })
+    expect(Inspector.getNumberOfElements(dataPb)).toBe(0)
+  })
+
   test("GetNumberOfElementsOverDoubleValuesTest", () => {
     const sensor = new SensorBuilder()
       .withDoubleValues([1.4, 2.2, 3.7])

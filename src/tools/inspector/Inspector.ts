@@ -44,6 +44,17 @@ import { UnixTimestamp } from "@/models/UnixTimestamp"
 import { Data } from "@/models/Data"
 import { InvalidDataException, WrongValueException } from "@/Exception"
 import { TimestampsCompressor } from "@/compress/TimestampsCompressor"
+import {
+  getAccelerometerChannel,
+  getAccelerometerType,
+  getDoubleValues,
+  getElectrocardiogramChannel,
+  getIntValues,
+  getPhotoplethysmographChannel,
+  getPhotoplethysmographColor,
+  getPhotoplethysmographWavelength,
+  getValues
+} from "@/util/utils"
 
 const UINT32_MAX = 4294967295
 const MIN_TIMEZONE_OFFSET_MIN = -720
@@ -124,17 +135,7 @@ export class Inspector {
     if (dataPb.sensors.length === 0) {
       return 0
     }
-    switch (dataPb.sensors[0].values.oneofKind) {
-      case "intValuesContainer": {
-        return dataPb.sensors[0].values.intValuesContainer.values.length
-      }
-      case "doubleValuesContainer": {
-        return dataPb.sensors[0].values.doubleValuesContainer.values.length
-      }
-      default: {
-        return 0
-      }
-    }
+    return getValues(dataPb.sensors[0])?.length ?? 0
   }
 
   /**
@@ -169,7 +170,7 @@ export class Inspector {
 
     // Rule 2: every sensor has as many values as there are unix timestamps
     data.sensors.forEach(sensor => {
-      if (Inspector.getNumberOfValues(sensor) !== numberOfUnixTimestamps) {
+      if ((getValues(sensor)?.length ?? 0) !== numberOfUnixTimestamps) {
         throw new InvalidDataException("Inspector.validateDecompressed", "Number of unix timestamps should be equal to the number of data points")
       }
     })
@@ -206,8 +207,8 @@ export class Inspector {
     // Rule 6: every integer value difference (and the first value) fits into int64.
     // JavaScript-specific: values and differences must be safe integers, which is the stricter limit.
     data.sensors.forEach(sensor => {
-      if (sensor.values.oneofKind === "intValuesContainer") {
-        const values = sensor.values.intValuesContainer.values
+      const values = getIntValues(sensor)
+      if (values !== undefined) {
         for (let i = 0; i < values.length; i++) {
           const difference = i === 0 ? values[0] : values[i] - values[i - 1]
           if (!Number.isSafeInteger(values[i]) || !Number.isSafeInteger(difference)) {
@@ -284,7 +285,7 @@ export class Inspector {
       numberOfUnixTimestamps += sectionSize
     })
     dataPb.sensors.forEach(sensor => {
-      if (Inspector.getNumberOfValues(sensor) !== numberOfUnixTimestamps) {
+      if ((getValues(sensor)?.length ?? 0) !== numberOfUnixTimestamps) {
         throw new InvalidDataException("Inspector.validateCompressed", "Number of unix timestamps should be equal to the number of data points")
       }
     })
@@ -326,9 +327,10 @@ export class Inspector {
     // Rule 8: every decompressed integer value fits into int64.
     // JavaScript-specific: differences and decompressed values must be safe integers, which is the stricter limit.
     dataPb.sensors.forEach(sensor => {
-      if (sensor.values.oneofKind === "intValuesContainer") {
+      const differences = getIntValues(sensor)
+      if (differences !== undefined) {
         let value = 0
-        sensor.values.intValuesContainer.values.forEach(difference => {
+        differences.forEach(difference => {
           value += difference
           if (!Number.isSafeInteger(difference) || !Number.isSafeInteger(value)) {
             throw new WrongValueException("Inspector.validateCompressed", "Decompressed integer values must be safe integers")
@@ -350,32 +352,18 @@ export class Inspector {
     dataPb.sensors.forEach(Inspector.checkSensorTypeValues)
   }
 
-  private static getNumberOfValues(sensor: Sensor): number {
-    switch (sensor.values.oneofKind) {
-      case "intValuesContainer": {
-        return sensor.values.intValuesContainer.values.length
-      }
-      case "doubleValuesContainer": {
-        return sensor.values.doubleValuesContainer.values.length
-      }
-      default: {
-        return 0
-      }
-    }
-  }
-
   private static checkDoubleValuesFinite(sensor: Sensor) {
-    if (sensor.values.oneofKind === "doubleValuesContainer") {
-      sensor.values.doubleValuesContainer.values.forEach(value => {
-        if (!Number.isFinite(value)) {
-          throw new WrongValueException("Inspector.checkDoubleValuesFinite", "Double values must be finite")
-        }
-      })
-    }
+    getDoubleValues(sensor)?.forEach(value => {
+      if (!Number.isFinite(value)) {
+        throw new WrongValueException("Inspector.checkDoubleValuesFinite", "Double values must be finite")
+      }
+    })
   }
 
   private static checkPhotoplethysmographLight(sensor: Sensor) {
-    if (sensor.type.oneofKind === "photoplethysmograph" && sensor.type.photoplethysmograph.light.oneofKind === undefined) {
+    // the channel is defined for every photoplethysmograph, so it tells whether the sensor is one
+    const isPhotoplethysmograph = getPhotoplethysmographChannel(sensor) !== undefined
+    if (isPhotoplethysmograph && getPhotoplethysmographColor(sensor) === undefined && getPhotoplethysmographWavelength(sensor) === undefined) {
       throw new InvalidDataException("Inspector.checkPhotoplethysmographLight", "Photoplethysmograph light must be color or wavelengthNm")
     }
   }
@@ -385,29 +373,20 @@ export class Inspector {
    * of the Pcore specification. Sensors without sensor type are not checked.
    */
   private static checkSensorTypeValues(sensor: Sensor) {
-    switch (sensor.type.oneofKind) {
-      case "photoplethysmograph": {
-        const light = sensor.type.photoplethysmograph.light
-        if (light.oneofKind === "color" && ![Color.RED, Color.GREEN, Color.BLUE].includes(light.color)) {
-          throw new WrongValueException("Inspector.checkSensorTypeValues", "Photoplethysmograph color should be RED, GREEN or BLUE")
-        }
-        if (light.oneofKind === "wavelengthNm" && (light.wavelengthNm < MIN_PHOTOPLETHYSMOGRAPH_WAVELENGTH_NM || light.wavelengthNm > MAX_PHOTOPLETHYSMOGRAPH_WAVELENGTH_NM)) {
-          throw new WrongValueException("Inspector.checkSensorTypeValues", "Photoplethysmograph wavelength should be between 350 and 1000")
-        }
-        break
-      }
-      case "accelerometer": {
-        if (sensor.type.accelerometer.type === AccelerometerType.UNSPECIFIED) {
-          throw new WrongValueException("Inspector.checkSensorTypeValues", "Accelerometer type must not be UNSPECIFIED")
-        }
-        break
-      }
-      case "electrocardiogram": {
-        if (sensor.type.electrocardiogram.channel > MAX_ELECTROCARDIOGRAM_CHANNEL) {
-          throw new WrongValueException("Inspector.checkSensorTypeValues", "Electrocardiogram channel should be smaller or equal to 22")
-        }
-        break
-      }
+    const color = getPhotoplethysmographColor(sensor)
+    if (color !== undefined && ![Color.RED, Color.GREEN, Color.BLUE].includes(color)) {
+      throw new WrongValueException("Inspector.checkSensorTypeValues", "Photoplethysmograph color should be RED, GREEN or BLUE")
+    }
+    const wavelengthNm = getPhotoplethysmographWavelength(sensor)
+    if (wavelengthNm !== undefined && (wavelengthNm < MIN_PHOTOPLETHYSMOGRAPH_WAVELENGTH_NM || wavelengthNm > MAX_PHOTOPLETHYSMOGRAPH_WAVELENGTH_NM)) {
+      throw new WrongValueException("Inspector.checkSensorTypeValues", "Photoplethysmograph wavelength should be between 350 and 1000")
+    }
+    if (getAccelerometerType(sensor) === AccelerometerType.UNSPECIFIED) {
+      throw new WrongValueException("Inspector.checkSensorTypeValues", "Accelerometer type must not be UNSPECIFIED")
+    }
+    const electrocardiogramChannel = getElectrocardiogramChannel(sensor)
+    if (electrocardiogramChannel !== undefined && electrocardiogramChannel > MAX_ELECTROCARDIOGRAM_CHANNEL) {
+      throw new WrongValueException("Inspector.checkSensorTypeValues", "Electrocardiogram channel should be smaller or equal to 22")
     }
   }
 
@@ -427,26 +406,13 @@ export class Inspector {
   private static getSensorIdentification(sensor: Sensor): string {
     switch (sensor.type.oneofKind) {
       case "photoplethysmograph": {
-        const photoplethysmograph = sensor.type.photoplethysmograph
-        const light = photoplethysmograph.light
-        switch (light.oneofKind) {
-          case "color": {
-            return `photoplethysmograph(color=${light.color}, channel=${photoplethysmograph.channel})`
-          }
-          case "wavelengthNm": {
-            return `photoplethysmograph(wavelengthNm=${light.wavelengthNm}, channel=${photoplethysmograph.channel})`
-          }
-          default: {
-            return `photoplethysmograph(channel=${photoplethysmograph.channel})`
-          }
-        }
+        return `photoplethysmograph(color=${getPhotoplethysmographColor(sensor)}, wavelengthNm=${getPhotoplethysmographWavelength(sensor)}, channel=${getPhotoplethysmographChannel(sensor)})`
       }
       case "accelerometer": {
-        const accelerometer = sensor.type.accelerometer
-        return `accelerometer(type=${accelerometer.type}, channel=${accelerometer.channel})`
+        return `accelerometer(type=${getAccelerometerType(sensor)}, channel=${getAccelerometerChannel(sensor)})`
       }
       case "electrocardiogram": {
-        return `electrocardiogram(channel=${sensor.type.electrocardiogram.channel})`
+        return `electrocardiogram(channel=${getElectrocardiogramChannel(sensor)})`
       }
       default: {
         /* istanbul ignore next */

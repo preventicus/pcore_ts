@@ -32,6 +32,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 */
 
 import { IntValuesContainer, Sensor } from "@/ProtobufDefinitions"
+import { getIntValues } from "@/util/utils"
 
 /**
  * Provides compression utilities for sensor data, including delta encoding for integer sequences.
@@ -51,30 +52,24 @@ export class SensorCompressor {
 
     sensorPb.type = structuredClone(sensor.type)
 
-    switch (sensor.values.oneofKind) {
-      case "intValuesContainer": {
-        const values = sensor.values.intValuesContainer.values
-        if (values.length === 0) {
-          sensorPb.values = structuredClone(sensor.values)
-          return sensorPb
-        }
-        const intValuesContainerPb = IntValuesContainer.create()
-        intValuesContainerPb.values.push(values[0])
-        for (let i = 1; i < values.length; i++) {
-          const difference = values[i] - values[i - 1]
-          intValuesContainerPb.values.push(difference)
-        }
+    const values = getIntValues(sensor)
+    if (values === undefined) {
+      // double values are stored unchanged
+      sensorPb.values = structuredClone(sensor.values)
+      return sensorPb
+    }
 
-        sensorPb.values = {
-          oneofKind: "intValuesContainer",
-          intValuesContainer: intValuesContainerPb
-        }
-        break
+    // CompressIntegerValues: the first value is stored as difference to zero
+    const compressedValues: number[] = []
+    if (values.length > 0) {
+      compressedValues.push(values[0])
+      for (let i = 1; i < values.length; i++) {
+        compressedValues.push(values[i] - values[i - 1])
       }
-      case "doubleValuesContainer": {
-        sensorPb.values = structuredClone(sensor.values)
-        break
-      }
+    }
+    sensorPb.values = {
+      oneofKind: "intValuesContainer",
+      intValuesContainer: IntValuesContainer.create({ values: compressedValues })
     }
     return sensorPb
   }
