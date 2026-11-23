@@ -91,7 +91,7 @@ export interface Data_Metadata {
     /**
      * @generated from protobuf field: sint32 timezone_offset_min = 1
      */
-    timezoneOffsetMin: number; // offset of local time to UTC in minutes, e.g. 60 for UTC+01:00 and -300 for UTC-05:00
+    timezoneOffsetMin: number; // offset of local time to UTC in minutes, e.g. 60 for UTC+01:00 and -300 for UTC-05:00; valid range: -720..840 (inclusive)
     /**
      * @generated from protobuf field: com.preventicus.pcore.Version pcore_version = 2
      */
@@ -227,7 +227,7 @@ export interface Data_Sensor_Accelerometer {
     /**
      * @generated from protobuf field: com.preventicus.pcore.Data.Sensor.Accelerometer.Type type = 1
      */
-    type: Data_Sensor_Accelerometer_Type;
+    type: Data_Sensor_Accelerometer_Type; // TYPE_UNSPECIFIED is not allowed
     /**
      * @generated from protobuf field: uint32 channel = 2
      */
@@ -267,6 +267,8 @@ export enum Data_Sensor_Accelerometer_Type {
  */
 export interface Data_Sensor_Photoplethysmograph {
     /**
+     * must be set
+     *
      * @generated from protobuf oneof: light
      */
     light: {
@@ -274,13 +276,13 @@ export interface Data_Sensor_Photoplethysmograph {
         /**
          * @generated from protobuf field: uint32 wavelength_nm = 1
          */
-        wavelengthNm: number; // LED-based PPG sensors (e.g. wearables): wavelength of the LED in nanometers
+        wavelengthNm: number; // LED-based PPG sensors (e.g. wearables): wavelength of the LED in nanometers; valid range: 350..1000 (inclusive)
     } | {
         oneofKind: "color";
         /**
          * @generated from protobuf field: com.preventicus.pcore.Data.Sensor.Photoplethysmograph.Color color = 2
          */
-        color: Data_Sensor_Photoplethysmograph_Color; // camera-based PPG (e.g. smartphones): color channel of the RGB image sensor
+        color: Data_Sensor_Photoplethysmograph_Color; // camera-based PPG (e.g. smartphones): color channel of the RGB image sensor; COLOR_UNSPECIFIED is not allowed
     } | {
         oneofKind: undefined;
     };
@@ -317,7 +319,7 @@ export interface Data_Sensor_Electrocardiogram {
     /**
      * @generated from protobuf field: uint32 channel = 1
      */
-    channel: number; // distinguishes several ECG channels (leads)
+    channel: number; // distinguishes several ECG channels (leads); valid range: 0..22 (inclusive)
 }
 // @generated message type with reflection information, may provide speed optimized methods
 class Version$Type extends MessageType<Version> {
