@@ -194,6 +194,16 @@ describe("DataDecompressorTest", () => {
     expect(() => decompress({ first: 1, sizes: [3], inner: [1], outer: [0] }, [intSensor([1, 1, 1])], 841)).toThrow(WrongValueException)
   })
 
+  test("MinTimeZoneOffsetTest", () => {
+    const data = decompress({ first: 1, sizes: [3], inner: [1], outer: [0] }, [intSensor([1, 1, 1])], -720)
+    expect(data.metadata?.timezoneOffsetMin).toBe(-720)
+  })
+
+  test("MaxTimeZoneOffsetTest", () => {
+    const data = decompress({ first: 1, sizes: [3], inner: [1], outer: [0] }, [intSensor([1, 1, 1])], 840)
+    expect(data.metadata?.timezoneOffsetMin).toBe(840)
+  })
+
   test("LegacyDuplicatePpgSensorTest", () => {
     const sensors = [
       new SensorBuilder().withIntValues([1, 1, 1]).withPhotoplethysmographColor(Color.GREEN).build(),

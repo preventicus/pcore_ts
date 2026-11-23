@@ -100,8 +100,11 @@ describe("DataCompressorTest", () => {
     expect(() => compress([1, 2, 3], [intSensor([1, 2, 3])], 841)).toThrow(WrongValueException)
   })
 
-  test("TimeZoneOffsetLimitsTest", () => {
+  test("MinTimeZoneOffsetTest", () => {
     expect(() => compress([1, 2, 3], [intSensor([1, 2, 3])], -720)).not.toThrow()
+  })
+
+  test("MaxTimeZoneOffsetTest", () => {
     expect(() => compress([1, 2, 3], [intSensor([1, 2, 3])], 840)).not.toThrow()
   })
 
