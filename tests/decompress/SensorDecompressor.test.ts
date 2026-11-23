@@ -31,9 +31,9 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 */
 
-import { getIntValues, getDoubleValues, getAccelerometerType, getPhotoplethysmographWavelength, getPhotoplethysmographColor, getElectrocardiogramChannel } from "../../src/util/utils"
+import { getIntValues, getDoubleValues, getAccelerometerType, getPhotoplethysmographWavelength, getPhotoplethysmographColor, getElectrocardiogramChannel } from "@/util/utils"
 import { SensorBuilder } from "@/builder/SensorBuilder"
-import { AccelerometerType, Color } from "../../src/ProtobufDefinitions"
+import { AccelerometerType, Color } from "@/ProtobufDefinitions"
 import { SensorDecompressor } from "@/decompress/SensorDecompressor"
 
 describe("SensorDecompressor", () => {

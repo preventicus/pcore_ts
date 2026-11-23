@@ -45,6 +45,7 @@ import { DataDecompressor } from "../../decompress/DataDecompressor"
 import { DataForm } from "./DataForm"
 import { UnixTimestamps } from "../../models/UnixTimestamp"
 import { Inspector } from "@tools/inspector/Inspector"
+import { InvalidDataException } from "@/Exception"
 
 interface DecompressedSensorWithoutTypeJson {
     valuesType: string,
@@ -167,7 +168,7 @@ export class Converter {
       }
       default: {
         /* istanbul ignore next */
-        // currently unreachable code since validator capture this error before
+        // currently unreachable code since the validator captures this error before
         throw new Error(`Unsupported sensor value type: ${sensor.values.oneofKind}`)
       }
     }
@@ -232,9 +233,7 @@ export class Converter {
           return { oneofKind: "doubleValuesContainer", doubleValuesContainer: { values: sensor.values } }
         }
         default: {
-          /* istanbul ignore next */
-          // currently unreachable code since validator capture this error before
-          throw new Error(`Unsupported sensor value type: ${sensor.valuesType}`)
+          throw new InvalidDataException("Converter.parseFromDecompressedSensor", `Unsupported sensor value type: ${sensor.valuesType}`)
         }
       }
     })()

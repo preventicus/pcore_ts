@@ -164,30 +164,30 @@ export class Inspector {
 
     // Rule 1: at least one unix timestamp and at least one sensor
     if (numberOfUnixTimestamps === 0 || data.sensors.length === 0) {
-      throw new InvalidDataException("Inspector.validate", "Data must hold at least one unix timestamp and at least one sensor")
+      throw new InvalidDataException("Inspector.validateDecompressed", "Data must hold at least one unix timestamp and at least one sensor")
     }
 
     // Rule 2: every sensor has as many values as there are unix timestamps
     data.sensors.forEach(sensor => {
       if (Inspector.getNumberOfValues(sensor) !== numberOfUnixTimestamps) {
-        throw new InvalidDataException("Inspector.validate", "Number of unix timestamps should be equal to the number of data points")
+        throw new InvalidDataException("Inspector.validateDecompressed", "Number of unix timestamps should be equal to the number of data points")
       }
     })
 
     // Rule 3: unix timestamps are strictly increasing
     for (let i = 1; i < numberOfUnixTimestamps; i++) {
       if (!(timestamps[i] > timestamps[i - 1])) {
-        throw new InvalidDataException("Inspector.validate", "Unix timestamps must be strictly increasing")
+        throw new InvalidDataException("Inspector.validateDecompressed", "Unix timestamps must be strictly increasing")
       }
     }
 
     // Rule 4: no unix timestamp is negative (and, JavaScript-specific, every timestamp is a safe integer)
     timestamps.forEach(timestamp => {
       if (timestamp < 0) {
-        throw new WrongValueException("Inspector.validate", "Unix timestamps must not be negative")
+        throw new WrongValueException("Inspector.validateDecompressed", "Unix timestamps must not be negative")
       }
       if (!Number.isSafeInteger(timestamp)) {
-        throw new WrongValueException("Inspector.validate", "Unix timestamps must be safe integers")
+        throw new WrongValueException("Inspector.validateDecompressed", "Unix timestamps must be safe integers")
       }
     })
 
@@ -199,7 +199,7 @@ export class Inspector {
       const outerSectionDuration = k === 0 ? 0 : timestamps[startIdx] - timestamps[sectionIdxs[k - 1]]
       const innerSectionDuration = endIdx - startIdx > 1 ? timestamps[startIdx + 1] - timestamps[startIdx] : 0
       if (outerSectionDuration > UINT32_MAX || innerSectionDuration > UINT32_MAX) {
-        throw new WrongValueException("Inspector.validate", "Section durations must fit into uint32")
+        throw new WrongValueException("Inspector.validateDecompressed", "Section durations must fit into uint32")
       }
     }
 
@@ -211,7 +211,7 @@ export class Inspector {
         for (let i = 0; i < values.length; i++) {
           const difference = i === 0 ? values[0] : values[i] - values[i - 1]
           if (!Number.isSafeInteger(values[i]) || !Number.isSafeInteger(difference)) {
-            throw new WrongValueException("Inspector.validate", "Integer values and their differences must be safe integers")
+            throw new WrongValueException("Inspector.validateDecompressed", "Integer values and their differences must be safe integers")
           }
         }
       }
@@ -226,7 +226,7 @@ export class Inspector {
     // Rule 9: every sensor has a sensor type set
     data.sensors.forEach(sensor => {
       if (sensor.type.oneofKind === undefined) {
-        throw new InvalidDataException("Inspector.validate", "Every sensor must be a photoplethysmograph, accelerometer or electrocardiogram")
+        throw new InvalidDataException("Inspector.validateDecompressed", "Every sensor must be a photoplethysmograph, accelerometer or electrocardiogram")
       }
     })
 
@@ -235,7 +235,7 @@ export class Inspector {
     data.sensors.forEach(sensor => {
       const sensorIdentification = Inspector.getSensorIdentification(sensor)
       if (sensorIdentifications.has(sensorIdentification)) {
-        throw new InvalidDataException("Inspector.validate", `Sensor identification must be unique: ${sensorIdentification}`)
+        throw new InvalidDataException("Inspector.validateDecompressed", `Sensor identification must be unique: ${sensorIdentification}`)
       }
       sensorIdentifications.add(sensorIdentification)
     })
@@ -265,7 +265,7 @@ export class Inspector {
 
     // Rule 1: compressed timestamps with at least one section and at least one sensor
     if (compressedTimestampsContainer === undefined || compressedTimestampsContainer.sectionsSizes.length === 0 || dataPb.sensors.length === 0) {
-      throw new InvalidDataException("Inspector.validate", "Data must hold compressed timestamps with at least one section and at least one sensor")
+      throw new InvalidDataException("Inspector.validateCompressed", "Data must hold compressed timestamps with at least one section and at least one sensor")
     }
 
     const outerSectionsDurations = compressedTimestampsContainer.outerSectionsDurationsMs
@@ -275,7 +275,7 @@ export class Inspector {
 
     // Rule 2: the three vectors of the timestamps container have the same length
     if (outerSectionsDurations.length !== numberOfSections || innerSectionsDurations.length !== numberOfSections) {
-      throw new InvalidDataException("Inspector.validate", "Vectors in compressed_timestamps_container must have the same length")
+      throw new InvalidDataException("Inspector.validateCompressed", "Vectors in compressed_timestamps_container must have the same length")
     }
 
     // Rule 3: every sensor has as many values as the sum of sections_sizes
@@ -285,34 +285,34 @@ export class Inspector {
     })
     dataPb.sensors.forEach(sensor => {
       if (Inspector.getNumberOfValues(sensor) !== numberOfUnixTimestamps) {
-        throw new InvalidDataException("Inspector.validate", "Number of unix timestamps should be equal to the number of data points")
+        throw new InvalidDataException("Inspector.validateCompressed", "Number of unix timestamps should be equal to the number of data points")
       }
     })
 
     // Rule 4: all sections sizes are greater than 0
     sectionsSizes.forEach(sectionSize => {
       if (!(sectionSize > 0)) {
-        throw new InvalidDataException("Inspector.validate", "Any value in sections_sizes must be greater than 0")
+        throw new InvalidDataException("Inspector.validateCompressed", "Any value in sections_sizes must be greater than 0")
       }
     })
 
     // Rule 5: the first outer section duration is 0
     if (outerSectionsDurations[0] !== 0) {
-      throw new InvalidDataException("Inspector.validate", "First value in outer_sections_durations_ms must always be 0")
+      throw new InvalidDataException("Inspector.validateCompressed", "First value in outer_sections_durations_ms must always be 0")
     }
 
     // Rule 6: sections do not overlap, i.e. every other outer section duration is greater than
     // the duration covered by the previous section
     for (let i = 1; i < numberOfSections; i++) {
       if (!(outerSectionsDurations[i] > (sectionsSizes[i - 1] - 1) * innerSectionsDurations[i - 1])) {
-        throw new InvalidDataException("Inspector.validate", "Sections in compressed_timestamps_container must not overlap")
+        throw new InvalidDataException("Inspector.validateCompressed", "Sections in compressed_timestamps_container must not overlap")
       }
     }
 
     // Rule 7: an inner section duration is 0 if and only if its section consists of a single timestamp
     for (let i = 0; i < numberOfSections; i++) {
       if ((innerSectionsDurations[i] === 0) !== (sectionsSizes[i] === 1)) {
-        throw new InvalidDataException("Inspector.validate", "inner_sections_durations_ms must be 0 exactly for sections with a single timestamp")
+        throw new InvalidDataException("Inspector.validateCompressed", "inner_sections_durations_ms must be 0 exactly for sections with a single timestamp")
       }
     }
 
@@ -320,7 +320,7 @@ export class Inspector {
     // The timestamps are strictly increasing (rules 5 to 7), so checking the first and the last one is sufficient.
     const firstUnixTimestamp = compressedTimestampsContainer.firstUnixTimestampMs
     if (!Number.isSafeInteger(firstUnixTimestamp) || !Number.isSafeInteger(Inspector.getLastUnixTimestamp(dataPb))) {
-      throw new WrongValueException("Inspector.validate", "Decompressed unix timestamps must be safe integers")
+      throw new WrongValueException("Inspector.validateCompressed", "Decompressed unix timestamps must be safe integers")
     }
 
     // Rule 8: every decompressed integer value fits into int64.
@@ -331,7 +331,7 @@ export class Inspector {
         sensor.values.intValuesContainer.values.forEach(difference => {
           value += difference
           if (!Number.isSafeInteger(difference) || !Number.isSafeInteger(value)) {
-            throw new WrongValueException("Inspector.validate", "Decompressed integer values must be safe integers")
+            throw new WrongValueException("Inspector.validateCompressed", "Decompressed integer values must be safe integers")
           }
         })
       }
@@ -368,7 +368,7 @@ export class Inspector {
     if (sensor.values.oneofKind === "doubleValuesContainer") {
       sensor.values.doubleValuesContainer.values.forEach(value => {
         if (!Number.isFinite(value)) {
-          throw new WrongValueException("Inspector.validate", "Double values must be finite")
+          throw new WrongValueException("Inspector.checkDoubleValuesFinite", "Double values must be finite")
         }
       })
     }
@@ -376,7 +376,7 @@ export class Inspector {
 
   private static checkPhotoplethysmographLight(sensor: Sensor) {
     if (sensor.type.oneofKind === "photoplethysmograph" && sensor.type.photoplethysmograph.light.oneofKind === undefined) {
-      throw new InvalidDataException("Inspector.validate", "Photoplethysmograph light must be color or wavelengthNm")
+      throw new InvalidDataException("Inspector.checkPhotoplethysmographLight", "Photoplethysmograph light must be color or wavelengthNm")
     }
   }
 
@@ -389,22 +389,22 @@ export class Inspector {
       case "photoplethysmograph": {
         const light = sensor.type.photoplethysmograph.light
         if (light.oneofKind === "color" && ![Color.RED, Color.GREEN, Color.BLUE].includes(light.color)) {
-          throw new WrongValueException("Inspector.validate", "Photoplethysmograph color should be RED, GREEN or BLUE")
+          throw new WrongValueException("Inspector.checkSensorTypeValues", "Photoplethysmograph color should be RED, GREEN or BLUE")
         }
         if (light.oneofKind === "wavelengthNm" && (light.wavelengthNm < MIN_PHOTOPLETHYSMOGRAPH_WAVELENGTH_NM || light.wavelengthNm > MAX_PHOTOPLETHYSMOGRAPH_WAVELENGTH_NM)) {
-          throw new WrongValueException("Inspector.validate", "Photoplethysmograph wavelength should be between 350 and 1000")
+          throw new WrongValueException("Inspector.checkSensorTypeValues", "Photoplethysmograph wavelength should be between 350 and 1000")
         }
         break
       }
       case "accelerometer": {
         if (sensor.type.accelerometer.type === AccelerometerType.UNSPECIFIED) {
-          throw new WrongValueException("Inspector.validate", "Accelerometer type must not be UNSPECIFIED")
+          throw new WrongValueException("Inspector.checkSensorTypeValues", "Accelerometer type must not be UNSPECIFIED")
         }
         break
       }
       case "electrocardiogram": {
         if (sensor.type.electrocardiogram.channel > MAX_ELECTROCARDIOGRAM_CHANNEL) {
-          throw new WrongValueException("Inspector.validate", "Electrocardiogram channel should be smaller or equal to 22")
+          throw new WrongValueException("Inspector.checkSensorTypeValues", "Electrocardiogram channel should be smaller or equal to 22")
         }
         break
       }
@@ -416,7 +416,7 @@ export class Inspector {
       return
     }
     if (timezoneOffsetMin < MIN_TIMEZONE_OFFSET_MIN || timezoneOffsetMin > MAX_TIMEZONE_OFFSET_MIN) {
-      throw new WrongValueException("Inspector.validate", "TimezoneOffset must be between -720 and 840")
+      throw new WrongValueException("Inspector.checkTimezoneOffset", "TimezoneOffset must be between -720 and 840")
     }
   }
 

@@ -47,8 +47,8 @@ class Exception extends Error {
  * Exception indicating that provided data is structurally incorrect or inconsistent.
  */
 export class InvalidDataException extends Exception {
-  constructor(functionName: string, variableName: string) {
-    super(functionName, `Invalid value in variable '${variableName}'.`)
+  constructor(functionName: string, message: string) {
+    super(functionName, message)
   }
 }
 

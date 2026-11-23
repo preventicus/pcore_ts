@@ -18,7 +18,7 @@ npm run test:coverage         # jest --coverage
 npm run lint                  # eslint over src/ and tests/
 npm run lint:fix
 
-npx jest tests/compress/TimestampsCompress.test.ts   # single test file
+npx jest tests/compress/TimestampsCompressor.test.ts # single test file
 npx jest -t "PcoreEmptyDataTest"                     # single test by name
 
 npm run example:file          # ts-node runs of src/example/*
@@ -82,7 +82,7 @@ Timestamps are split into *sections* of constant sampling interval (`TimestampsC
 ## Conventions
 
 - **ESLint (`.eslintrc.json`) is strict and unusual**: double quotes, **no semicolons**, 2-space indent, `space-before-function-paren: never`, `arrow-parens: as-needed`, `no-console: error`, `eqeqeq`. Match the surrounding style exactly; `npm run lint` gates the build.
-- **Path aliases**: `@/*` → `src/*`, `@generated/*` → `src/generated/pcore/*`, `@tools/*` → `src/tools/*`. These are declared in three places that must stay in sync — `tsconfig.json` (note its `baseUrl` is `src`, so the mappings are written relative to `src`, and `@generated` is mapped only as the two exact names `@generated/pcore` and `@generated/pcoreVersion`, not as a wildcard), `tsconfig.test.json` (`baseUrl` `.`), and `jest.config.js` `moduleNameMapper`. Runtime resolution comes from `tsc-alias` at build time and `tsconfig-paths/register` for `ts-node` examples. Existing files mix aliases and relative imports; prefer aliases in new code.
+- **Path aliases**: `@/*` → `src/*`, `@generated/*` → `src/generated/pcore/*`, `@tools/*` → `src/tools/*`. These are declared in three places that must stay in sync — `tsconfig.json` (note its `baseUrl` is `src`, so the mappings are written relative to `src`, and `@generated` is mapped only as the two exact names `@generated/pcore` and `@generated/pcoreVersion`, not as a wildcard), `tsconfig.test.json` (`baseUrl` `.`), and `jest.config.js` `moduleNameMapper`. Runtime resolution comes from `tsc-alias` at build time and `tsconfig-paths/register` for `ts-node` examples. Tests use only aliases (`@/index` for the public API); some `src/` files still use relative imports — prefer aliases in new code.
 - Every source file carries the BSD-3-Clause header comment (~32 lines) — copy it into new files.
 - Public classes are static-only utility classes (`@typescript-eslint/no-extraneous-class` is off deliberately); mutation is avoided via `structuredClone` when copying protobuf sub-objects.
 - Genuinely unreachable branches are marked `/* istanbul ignore next */` rather than deleted, since validation already excludes them.

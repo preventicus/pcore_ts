@@ -32,12 +32,12 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 */
 
 import { TimestampsDecompressor } from "@/decompress/TimestampsDecompressor"
-import { CompressedTimestampsContainer } from "../../src/ProtobufDefinitions"
+import { CompressedTimestampsContainer } from "@/ProtobufDefinitions"
 import { UnixTimestamp } from "@/models/UnixTimestamp"
 
-function fillCompressedTimestampsContainerPb(fistUnixTimestamp: UnixTimestamp, innerSectionDurations: number[], outerSectionDurations: number[], sectionSizes: number[]): CompressedTimestampsContainer {
+function fillCompressedTimestampsContainerPb(firstUnixTimestamp: UnixTimestamp, innerSectionDurations: number[], outerSectionDurations: number[], sectionSizes: number[]): CompressedTimestampsContainer {
   const compressedTimestampsContainer = CompressedTimestampsContainer.create()
-  compressedTimestampsContainer.firstUnixTimestampMs = fistUnixTimestamp
+  compressedTimestampsContainer.firstUnixTimestampMs = firstUnixTimestamp
   compressedTimestampsContainer.innerSectionsDurationsMs = innerSectionDurations
   compressedTimestampsContainer.outerSectionsDurationsMs = outerSectionDurations
   compressedTimestampsContainer.sectionsSizes = sectionSizes

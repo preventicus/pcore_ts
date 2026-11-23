@@ -56,7 +56,7 @@ function main() {
   console.log(JSON.stringify(dataPbConvertedFromDecompressedJson))
   console.log("\n")
   console.log(JSON.stringify(dataPbConvertedFromCompressedJson))
-  /* eslint-disable no-console */
+  /* eslint-enable no-console */
 }
 
 main()

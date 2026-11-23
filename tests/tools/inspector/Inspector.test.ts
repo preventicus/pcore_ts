@@ -35,9 +35,9 @@ import {
   AccelerometerType,
   Color,
   DataPb
-} from "../../../src/ProtobufDefinitions"
-import { Inspector } from "../../../src/tools/inspector/Inspector"
-import { SensorBuilder } from "../../../src/builder/SensorBuilder"
+} from "@/ProtobufDefinitions"
+import { Inspector } from "@tools/inspector/Inspector"
+import { SensorBuilder } from "@/builder/SensorBuilder"
 
 describe("InspectorTest", () => {
   test("GetFirstUnixTimestampEmptyTest", () => {
@@ -117,7 +117,7 @@ describe("InspectorTest", () => {
     expect(Inspector.getNumberOfElements(dataPb)).toBe(0)
   })
 
-  test("GetNumberOfElementsEmptyTest", () => {
+  test("GetNumberOfElementsOverIntValuesTest", () => {
     const sensor = new SensorBuilder()
       .withIntValues([1, 2, 3])
       .build()

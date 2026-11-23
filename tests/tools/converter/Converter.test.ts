@@ -34,9 +34,8 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 import {
   AccelerometerType,
   Color
-} from "../../../src/ProtobufDefinitions"
-import { SensorBuilder } from "../../../src"
-import { Converter, DataBuilder, DataCompressor, DataForm, DataPb, InvalidDataException, MetadataBuilder, WrongValueException } from "../../../src"
+} from "@/ProtobufDefinitions"
+import { Converter, DataBuilder, DataCompressor, DataForm, DataPb, InvalidDataException, MetadataBuilder, SensorBuilder, WrongValueException } from "@/index"
 
 describe("ConverterTest", () => {
   test("NormalDataTest", () => {
@@ -172,6 +171,14 @@ describe("ConverterTest", () => {
       sensors: [{ valuesType: "intValuesContainer", values: [1, 2, 3], photoplethysmograph: { color: "YELLOW" } }]
     })
     expect(() => Converter.convertFromJson(json)).toThrow(WrongValueException)
+  })
+
+  test("ConvertFromJsonUnknownValuesTypeTest", () => {
+    const json = JSON.stringify({
+      timestamps: [10, 20, 30],
+      sensors: [{ valuesType: "stringValuesContainer", values: [1, 2, 3], electrocardiogram: { channel: 1 } }]
+    })
+    expect(() => Converter.convertFromJson(json)).toThrow(InvalidDataException)
   })
 
   test("ConvertFromDecompressedJsonWithoutChannelTest", () => {

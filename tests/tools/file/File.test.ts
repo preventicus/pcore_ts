@@ -32,8 +32,8 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 */
 
 import * as fs from "fs"
-import { AccelerometerType, Color, DataPb } from "../../../src/ProtobufDefinitions"
-import { Converter, DataBuilder, DataCompressor, DataDecompressor, DataForm, File, InvalidDataException, MetadataBuilder, SensorBuilder, WrongValueException } from "../../../src"
+import { AccelerometerType, Color, DataPb } from "@/ProtobufDefinitions"
+import { Converter, DataBuilder, DataCompressor, DataDecompressor, DataForm, File, InvalidDataException, MetadataBuilder, SensorBuilder, WrongValueException } from "@/index"
 import { PcoreVersion } from "@generated/pcoreVersion"
 
 describe("FileTest", () => {
@@ -222,7 +222,7 @@ describe("FileTest", () => {
     expect(dataJsonWrite).toBe(dataJsonRead)
   })
 
-  test("PcoreNormalDataTest", () => {
+  test("JsonNormalDataTest", () => {
     const path = __dirname + "/normalTest.pcore.json"
 
     const metadata = new MetadataBuilder()

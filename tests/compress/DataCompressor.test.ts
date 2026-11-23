@@ -31,13 +31,10 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 */
 
-import { AccelerometerType, Color, DataPb, Sensor } from "../../src/ProtobufDefinitions"
-import { DataCompressor, InvalidDataException, WrongValueException } from "../../src"
-import { DataBuilder } from "../../src"
+import { AccelerometerType, Color, DataPb, Sensor } from "@/ProtobufDefinitions"
+import { DataBuilder, DataCompressor, InvalidDataException, MetadataBuilder, SensorBuilder, WrongValueException } from "@/index"
 import { PcoreVersion } from "@generated/pcoreVersion"
-import { SensorBuilder } from "../../src"
-import { MetadataBuilder } from "../../src"
-import { getIntValues, getDoubleValues, getAccelerometerType, getPhotoplethysmographWavelength, getPhotoplethysmographColor, getElectrocardiogramChannel } from "../../src/util/utils"
+import { getIntValues, getDoubleValues, getAccelerometerType, getPhotoplethysmographWavelength, getPhotoplethysmographColor, getElectrocardiogramChannel } from "@/util/utils"
 
 describe("DataCompressorTest", () => {
   test("EmptyWithoutCompressorTest", () => {

@@ -93,7 +93,7 @@ function main() {
     dataReadJson = File.readPcoreJson(__dirname + "/dataWrite.pcore.json")
   } catch (e) {
     // eslint-disable-next-line no-console
-    console.error("Error when writing the file: ", e)
+    console.error("Error when reading the file: ", e)
     return
   }
 

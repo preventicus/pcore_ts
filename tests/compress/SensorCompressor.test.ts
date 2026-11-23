@@ -33,8 +33,8 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 import { SensorCompressor } from "@/compress/SensorCompressor"
 import { SensorBuilder } from "@/builder/SensorBuilder"
-import { AccelerometerType, Color } from "../../src/ProtobufDefinitions"
-import { getIntValues, getDoubleValues, getAccelerometerType, getPhotoplethysmographWavelength, getPhotoplethysmographColor, getElectrocardiogramChannel } from "../../src/util/utils"
+import { AccelerometerType, Color } from "@/ProtobufDefinitions"
+import { getIntValues, getDoubleValues, getAccelerometerType, getPhotoplethysmographWavelength, getPhotoplethysmographColor, getElectrocardiogramChannel } from "@/util/utils"
 
 describe("SensorCompressor", () => {
   test("ACCTest", () => {

@@ -36,7 +36,7 @@ import { PcoreVersion } from "@generated/pcoreVersion"
 import { MetadataCompressor } from "@/compress/MetadataCompressor"
 
 describe("MetadataCompressorTest", () => {
-  test("test", () => {
+  test("SetsCurrentPcoreVersionTest", () => {
     const metaData = new MetadataBuilder()
       .withTimezoneOffset(400)
       .withDeviceId("123")
