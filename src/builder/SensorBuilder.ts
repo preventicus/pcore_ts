@@ -142,9 +142,10 @@ export class SensorBuilder {
 
   /**
    * Finalizes and returns the constructed Sensor object.
+   * The returned object is a copy, so later changes to the builder do not affect it.
    * @returns A fully configured Sensor object.
    */
   build(): Sensor {
-    return this.sensor
+    return structuredClone(this.sensor)
   }
 }

@@ -69,7 +69,7 @@ interface DecompressedAccelerometerSensorJson extends DecompressedSensorWithoutT
 
 interface DecompressedElectrocardiogramSensorJson extends DecompressedSensorWithoutTypeJson {
     electrocardiogram: {
-        channel: number
+        channel?: number
     }
 }
 
@@ -130,13 +130,23 @@ export class Converter {
      * @throws {Error} Throws if internal parsing fails or unsupported sensor types are encountered.
      */
   static convertFromJson(json: string): DataPb {
-    const parsedJson = JSON.parse(json)
+    let parsedJson: unknown
+    try {
+      parsedJson = JSON.parse(json)
+    } catch {
+      throw new InvalidDataException("Converter.convertFromJson", "json is not valid JSON")
+    }
+    if (!Converter.isObject(parsedJson)) {
+      throw new InvalidDataException("Converter.convertFromJson", "json must be an object")
+    }
     if ("compressedTimestampsContainer" in parsedJson) {
-      const dataPb = parsedJson as DataPb
+      Converter.checkCompressedJsonStructure(parsedJson)
+      const dataPb = parsedJson as unknown as DataPb
       Inspector.validateCompressed(dataPb)
       return dataPb
     }
-    const decompressedPcoreJson = parsedJson as DecompressedPcoreJson
+    Converter.checkDecompressedJsonStructure(parsedJson)
+    const decompressedPcoreJson = parsedJson as unknown as DecompressedPcoreJson
     const data: Data = {
       metadata: decompressedPcoreJson.metadata,
       timestamps: decompressedPcoreJson.timestamps,
@@ -243,21 +253,20 @@ export class Converter {
       type = {
         oneofKind: "accelerometer",
         accelerometer: {
-          type: AccelerometerType[sensor.accelerometer.type as keyof typeof AccelerometerType],
+          type: Converter.parseEnum(AccelerometerType, sensor.accelerometer.type, AccelerometerType.UNSPECIFIED),
           channel: sensor.accelerometer.channel ?? 0
         }
       }
     } else if ("electrocardiogram" in sensor) {
       type = {
         oneofKind: "electrocardiogram",
-        electrocardiogram: { channel: sensor.electrocardiogram.channel }
+        electrocardiogram: { channel: sensor.electrocardiogram.channel ?? 0 }
       }
     } else if ("photoplethysmograph" in sensor) {
       const photoplethysmograph = sensor.photoplethysmograph
       let light: Photoplethysmograph["light"] = { oneofKind: undefined }
       if (photoplethysmograph.color !== undefined) {
-        const color = photoplethysmograph.color in Color ? Color[photoplethysmograph.color as keyof typeof Color] : Color.UNSPECIFIED
-        light = { oneofKind: "color", color }
+        light = { oneofKind: "color", color: Converter.parseEnum(Color, photoplethysmograph.color, Color.UNSPECIFIED) }
       } else if (photoplethysmograph.wavelengthNm !== undefined) {
         light = { oneofKind: "wavelengthNm", wavelengthNm: photoplethysmograph.wavelengthNm }
       }
@@ -267,5 +276,107 @@ export class Converter {
       }
     }
     return { values, type }
+  }
+
+  /**
+   * Returns the enum value with the given name, or `unknownValue` if the name is not a member of the enum.
+   * Unknown names are therefore rejected by the validation of the allowed sensor values.
+   */
+  private static parseEnum<T extends number>(enumObject: Record<string, string | number>, name: string, unknownValue: T): T {
+    const value = enumObject[name]
+    return typeof value === "number" ? value as T : unknownValue
+  }
+
+  private static isObject(value: unknown): value is Record<string, unknown> {
+    return typeof value === "object" && value !== null && !Array.isArray(value)
+  }
+
+  private static isNumberArray(value: unknown): value is number[] {
+    return Array.isArray(value) && value.every(element => typeof element === "number")
+  }
+
+  private static isOptional(value: unknown, type: "number" | "string"): boolean {
+    return value === undefined || typeof value === type
+  }
+
+  /**
+   * Checks that compressed JSON has the shape of a `DataPb` object, so that the validation
+   * does not fail with a TypeError on malformed input.
+   * @throws {InvalidDataException} If the structure does not match.
+   */
+  private static checkCompressedJsonStructure(json: Record<string, unknown>) {
+    const functionName = "Converter.checkCompressedJsonStructure"
+    if (json.metadata !== undefined && !Converter.isObject(json.metadata)) {
+      throw new InvalidDataException(functionName, "metadata must be an object")
+    }
+    const container = json.compressedTimestampsContainer
+    if (!Converter.isObject(container) ||
+      typeof container.firstUnixTimestampMs !== "number" ||
+      !Converter.isNumberArray(container.sectionsSizes) ||
+      !Converter.isNumberArray(container.innerSectionsDurationsMs) ||
+      !Converter.isNumberArray(container.outerSectionsDurationsMs)) {
+      throw new InvalidDataException(functionName, "compressedTimestampsContainer must hold firstUnixTimestampMs and three arrays of numbers")
+    }
+    if (!Array.isArray(json.sensors)) {
+      throw new InvalidDataException(functionName, "sensors must be an array")
+    }
+    json.sensors.forEach(sensor => {
+      if (!Converter.isObject(sensor) || !Converter.isObject(sensor.values) || !Converter.isObject(sensor.type)) {
+        throw new InvalidDataException(functionName, "every sensor must hold the objects values and type")
+      }
+      const valuesKind = sensor.values.oneofKind
+      if (valuesKind === "intValuesContainer" || valuesKind === "doubleValuesContainer") {
+        const valuesContainer = sensor.values[valuesKind]
+        if (!Converter.isObject(valuesContainer) || !Converter.isNumberArray(valuesContainer.values)) {
+          throw new InvalidDataException(functionName, `${valuesKind} must hold an array of numbers`)
+        }
+      }
+      const typeKind = sensor.type.oneofKind
+      if (typeKind === "photoplethysmograph" || typeKind === "accelerometer" || typeKind === "electrocardiogram") {
+        const typeMessage = sensor.type[typeKind]
+        if (!Converter.isObject(typeMessage) || (typeKind === "photoplethysmograph" && !Converter.isObject(typeMessage.light))) {
+          throw new InvalidDataException(functionName, `${typeKind} is malformed`)
+        }
+      }
+    })
+  }
+
+  /**
+   * Checks that decompressed JSON has the shape written by `convertToJson`, so that the conversion
+   * does not fail with a TypeError on malformed input.
+   * @throws {InvalidDataException} If the structure does not match.
+   */
+  private static checkDecompressedJsonStructure(json: Record<string, unknown>) {
+    const functionName = "Converter.checkDecompressedJsonStructure"
+    if (json.metadata !== undefined && !Converter.isObject(json.metadata)) {
+      throw new InvalidDataException(functionName, "metadata must be an object")
+    }
+    if (!Converter.isNumberArray(json.timestamps)) {
+      throw new InvalidDataException(functionName, "timestamps must be an array of numbers")
+    }
+    if (!Array.isArray(json.sensors)) {
+      throw new InvalidDataException(functionName, "sensors must be an array")
+    }
+    json.sensors.forEach(sensor => {
+      if (!Converter.isObject(sensor) || typeof sensor.valuesType !== "string" || !Converter.isNumberArray(sensor.values)) {
+        throw new InvalidDataException(functionName, "every sensor must hold valuesType and an array of numbers as values")
+      }
+      const { photoplethysmograph, accelerometer, electrocardiogram } = sensor
+      if (photoplethysmograph !== undefined && (!Converter.isObject(photoplethysmograph) ||
+        !Converter.isOptional(photoplethysmograph.color, "string") ||
+        !Converter.isOptional(photoplethysmograph.wavelengthNm, "number") ||
+        !Converter.isOptional(photoplethysmograph.channel, "number"))) {
+        throw new InvalidDataException(functionName, "photoplethysmograph is malformed")
+      }
+      if (accelerometer !== undefined && (!Converter.isObject(accelerometer) ||
+        !Converter.isOptional(accelerometer.type, "string") ||
+        !Converter.isOptional(accelerometer.channel, "number"))) {
+        throw new InvalidDataException(functionName, "accelerometer is malformed")
+      }
+      if (electrocardiogram !== undefined && (!Converter.isObject(electrocardiogram) ||
+        !Converter.isOptional(electrocardiogram.channel, "number"))) {
+        throw new InvalidDataException(functionName, "electrocardiogram is malformed")
+      }
+    })
   }
 }

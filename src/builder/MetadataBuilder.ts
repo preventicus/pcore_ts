@@ -42,6 +42,7 @@ export class MetadataBuilder {
   private readonly device: Device
   private readonly deviceFirmwareVersion: Version
   private readonly pcoreVersion: Version
+  private hasDevice = false
 
   /**
    * Initializes a new instance of the MetadataBuilder.
@@ -73,6 +74,7 @@ export class MetadataBuilder {
    * @returns The current builder instance for method chaining.
    */
   withDeviceName(name: string): this {
+    this.hasDevice = true
     this.device.name = name
     return this
   }
@@ -83,6 +85,7 @@ export class MetadataBuilder {
    * @returns The current builder instance for method chaining.
    */
   withDeviceId(id: string): this {
+    this.hasDevice = true
     this.device.id = id
     return this
   }
@@ -93,6 +96,7 @@ export class MetadataBuilder {
    * @returns The current builder instance for method chaining.
    */
   withDeviceManufacturer(manufacturer: string): this {
+    this.hasDevice = true
     this.device.manufacturer = manufacturer
     return this
   }
@@ -105,6 +109,7 @@ export class MetadataBuilder {
    * @returns The current builder instance for method chaining.
    */
   withDeviceFirmwareVersion(major: number, minor: number, patch: number): this {
+    this.hasDevice = true
     this.deviceFirmwareVersion.major = major
     this.deviceFirmwareVersion.minor = minor
     this.deviceFirmwareVersion.patch = patch
@@ -113,12 +118,16 @@ export class MetadataBuilder {
 
   /**
    * Finalizes and returns the constructed Metadata object.
+   * The device is only set if at least one device property was given.
+   * The returned object is a copy, so later changes to the builder do not affect it.
    * @returns A fully constructed Metadata object.
    */
   build(): Metadata {
-    this.device.firmwareVersion = this.deviceFirmwareVersion
-    this.metadata.device = this.device
+    if (this.hasDevice) {
+      this.device.firmwareVersion = this.deviceFirmwareVersion
+      this.metadata.device = this.device
+    }
     this.metadata.pcoreVersion = this.pcoreVersion
-    return this.metadata
+    return structuredClone(this.metadata)
   }
 }

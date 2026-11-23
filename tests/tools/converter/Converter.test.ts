@@ -181,6 +181,65 @@ describe("ConverterTest", () => {
     expect(() => Converter.convertFromJson(json)).toThrow(InvalidDataException)
   })
 
+  test("ConvertFromJsonMalformedJsonTest", () => {
+    // malformed input is reported as InvalidDataException instead of a SyntaxError or TypeError
+    const malformedJsons = [
+      "{nope",
+      "null",
+      "5",
+      "[]",
+      "{\"timestamps\": [1]}",
+      "{\"sensors\": []}",
+      "{\"timestamps\": [\"1\"], \"sensors\": []}",
+      "{\"timestamps\": [1], \"sensors\": [5]}",
+      "{\"timestamps\": [1], \"sensors\": [{\"valuesType\": \"intValuesContainer\"}]}",
+      "{\"timestamps\": [1], \"sensors\": [{\"valuesType\": \"intValuesContainer\", \"values\": [1], \"electrocardiogram\": {\"channel\": \"1\"}}]}",
+      "{\"timestamps\": [1], \"sensors\": [{\"valuesType\": \"intValuesContainer\", \"values\": [1], \"accelerometer\": 5}]}",
+      "{\"timestamps\": [1], \"sensors\": [{\"valuesType\": \"intValuesContainer\", \"values\": [1], \"photoplethysmograph\": {\"wavelengthNm\": \"530\"}}]}",
+      "{\"timestamps\": [1], \"sensors\": [], \"metadata\": 5}",
+      "{\"compressedTimestampsContainer\": 5, \"sensors\": []}",
+      "{\"compressedTimestampsContainer\": {\"firstUnixTimestampMs\": 1, \"sectionsSizes\": [1], \"innerSectionsDurationsMs\": [0]}, \"sensors\": []}"
+    ]
+    malformedJsons.forEach(json => {
+      expect(() => Converter.convertFromJson(json)).toThrow(InvalidDataException)
+    })
+  })
+
+  test("ConvertFromCompressedJsonMalformedSensorTest", () => {
+    const dataPb = compressedEcgData()
+    const json = JSON.stringify(dataPb)
+    const withoutSensors = JSON.stringify({ ...dataPb, sensors: 5 })
+    const withoutValuesContainer = json.replace("\"intValuesContainer\":{", "\"otherContainer\":{")
+    const withoutTypeMessage = json.replace("\"electrocardiogram\":{", "\"other\":{")
+    const metadataNoObject = JSON.stringify({ ...dataPb, metadata: 5 })
+    const sensorNoObject = JSON.stringify({ ...dataPb, sensors: [5] })
+
+    expect(Converter.convertFromJson(json)).toEqual(dataPb)
+    expect(() => Converter.convertFromJson(withoutSensors)).toThrow(InvalidDataException)
+    expect(() => Converter.convertFromJson(withoutValuesContainer)).toThrow(InvalidDataException)
+    expect(() => Converter.convertFromJson(withoutTypeMessage)).toThrow(InvalidDataException)
+    expect(() => Converter.convertFromJson(metadataNoObject)).toThrow(InvalidDataException)
+    expect(() => Converter.convertFromJson(sensorNoObject)).toThrow(InvalidDataException)
+  })
+
+  test("ConvertFromJsonUnknownAccelerometerTypeTest", () => {
+    // unknown type names are read as TYPE_UNSPECIFIED, which is not an allowed accelerometer type
+    const json = JSON.stringify({
+      timestamps: [10, 20, 30],
+      sensors: [{ valuesType: "intValuesContainer", values: [1, 2, 3], accelerometer: { type: "W_COORDINATE" } }]
+    })
+    expect(() => Converter.convertFromJson(json)).toThrow(WrongValueException)
+  })
+
+  test("ConvertFromDecompressedJsonWithoutEcgChannelTest", () => {
+    const json = JSON.stringify({
+      timestamps: [10, 20, 30],
+      sensors: [{ valuesType: "intValuesContainer", values: [1, 2, 3], electrocardiogram: {} }]
+    })
+    const dataPb = Converter.convertFromJson(json)
+    expect(dataPb.sensors[0].type).toEqual({ oneofKind: "electrocardiogram", electrocardiogram: { channel: 0 } })
+  })
+
   test("ConvertFromDecompressedJsonWithoutChannelTest", () => {
     // decompressed JSON written before the channel fields existed
     const json = JSON.stringify({
