@@ -73,10 +73,11 @@ The package is called `@preventicus/pcore`. It is not published in a package reg
 this git repository. npm then compiles the library on its own (script `prepare`):
 
 ```
-npm install git+ssh://git@github.com/preventicus/pcore_ts.git#<branch, tag or commit>
+npm install git+ssh://git@github.com/preventicus/pcore_ts.git#v2.1.0
 ```
 
-Without `#...` npm takes the default branch.
+Use the tag of a release, see [Versioning](#versioning). Without `#...` npm takes the current state of the default
+branch, which is not a release.
 
 Afterwards import from the package name; the type definitions are included:
 
@@ -169,6 +170,27 @@ For more examples see the `src/example` folder.
 ## Testing
 
 For testing run the `test` script.
+
+---
+
+## Versioning
+
+Releases are git tags of the form `vMAJOR.MINOR.PATCH`, equal to `version` in `package.json`.
+
+| Part | Meaning |
+|---|---|
+| MAJOR | The generation of the Pcore format that the library implements: `2` for pcore2. pcore1 is outdated and not supported. |
+| MINOR | A new feature or a changed interface of the library, also for a new minor version of the Pcore specification. |
+| PATCH | A fix of the library. |
+
+Only the major version is tied to the Pcore specification. That the library version 2.1.0 implements Pcore 2.1.0 is a
+coincidence: a fix of the library becomes 2.1.1 while the specification stays at 2.1.0. Which version of the specification
+is implemented is stated in `.pcore-version`, in the section [64-bit integers](#64-bit-integers) and in the metadata
+of every compressed payload (`pcoreVersion`).
+
+Unlike strict semantic versioning, a change that breaks existing code raises the minor version within the same Pcore
+generation, and its release notes say so. The package is installed from git tags only, so a user always names a
+release explicitly and never receives a newer version automatically.
 
 ---
 
