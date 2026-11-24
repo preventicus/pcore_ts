@@ -67,7 +67,34 @@ const dataPb = PcoreFile.readPcoreBinary("rejected.pcore", { validate: false })
 
 Node.js 18 or newer is required (the library uses `structuredClone`).
 
-Install the dependencies with `npm install`; this also compiles the library into `dist/`.
+### Using the library in another project
+
+The package is called `@preventicus/pcore`. It can be installed directly from this git repository; npm then
+compiles the library on its own (script `prepare`):
+
+```
+npm install git+ssh://git@github.com/preventicus/pcore_ts.git#<branch, tag or commit>
+```
+
+Without `#...` npm takes the default branch. If the package is available in a package registry that your project
+is configured for, `npm install @preventicus/pcore` does the same.
+
+Afterwards import from the package name; the type definitions are included:
+
+```
+import { DataBuilder, DataCompressor, PcoreFile, SensorBuilder } from "@preventicus/pcore"
+
+const sensor = new SensorBuilder().withIntValues([5, 7]).withElectrocardiogramChannel(1).build()
+const data = new DataBuilder().withTimestamps([1000, 1010]).withSensor(sensor).build()
+PcoreFile.writePcoreBinary(DataCompressor.compress(data), "output.pcore")
+```
+
+Only the compiled library (`dist/`) is part of the installed package, not the sources, tests and examples.
+
+### Working on the library
+
+Clone this repository and install the dependencies with `npm install`; this also compiles the library into `dist/`.
+`npm test` runs the tests and `npm run lint` the linter, which needs Node.js 20.19 or newer.
 
 The protobuf code in `src/generated/pcore/` is part of the repository. `npm run generate:proto` is only needed after
 changing `.pcore-version`: it fetches the Pcore definition from GitHub and replaces the generated code.
