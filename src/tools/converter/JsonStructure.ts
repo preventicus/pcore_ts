@@ -31,7 +31,9 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 */
 
+import { DataPb, Metadata } from "@/ProtobufDefinitions"
 import { InvalidDataException } from "@/Exception"
+import { JsonValue } from "@protobuf-ts/runtime"
 
 /**
  * Checks that JSON read by `Converter.convertFromJson` has the shape of the compressed or
@@ -73,15 +75,50 @@ export class JsonStructure {
   }
 
   /**
-   * Checks that compressed JSON has the shape of a `DataPb` object, so that the validation
-   * in `Inspector` does not fail with a TypeError on malformed input.
+   * Reads the metadata of compressed or decompressed JSON, which is written the same way in both forms.
+   * Missing fields get their default value, e.g. a missing timezone offset becomes 0, and unknown keys are ignored.
+   * @param metadata - The value of the `metadata` key.
+   * @returns The metadata, or `undefined` if the JSON holds no metadata.
+   * @throws {InvalidDataException} If the metadata is not an object or a field has the wrong type.
+   */
+  static parseMetadata(metadata: unknown): Metadata | undefined {
+    if (metadata === undefined) {
+      return undefined
+    }
+    if (!JsonStructure.isObject(metadata)) {
+      throw new InvalidDataException("JsonStructure.parseMetadata", "metadata must be an object")
+    }
+    try {
+      return Metadata.fromJson(metadata as JsonValue, { ignoreUnknownFields: true })
+    } catch (error) {
+      throw new InvalidDataException("JsonStructure.parseMetadata", `metadata is malformed (${String(error)})`)
+    }
+  }
+
+  /**
+   * Converts compressed JSON into a `DataPb` object. Missing fields get their default value,
+   * e.g. a `channel` missing in JSON written before the field existed becomes 0, and unknown keys are dropped.
+   * @param json - The parsed compressed JSON.
+   * @returns The typed data, which still has to be validated by `Inspector.validateCompressed`.
+   * @throws {InvalidDataException} If the structure does not match or a field has the wrong type.
+   */
+  static parseCompressed(json: Record<string, unknown>): DataPb {
+    JsonStructure.checkCompressed(json)
+    const dataPb = DataPb.create({ ...json, metadata: JsonStructure.parseMetadata(json.metadata) } as unknown as DataPb)
+    // the depth is also the number of checked array elements, so the default of 16 would skip the rest of the arrays
+    if (!DataPb.is(dataPb, Number.MAX_SAFE_INTEGER)) {
+      throw new InvalidDataException("JsonStructure.parseCompressed", "a field of the compressed data has the wrong type")
+    }
+    return dataPb
+  }
+
+  /**
+   * Checks that compressed JSON has the containers of a `DataPb` object, so that neither the conversion in
+   * `parseCompressed` nor the validation in `Inspector` fails with a TypeError on malformed input.
    * @throws {InvalidDataException} If the structure does not match.
    */
-  static checkCompressed(json: Record<string, unknown>) {
+  private static checkCompressed(json: Record<string, unknown>) {
     const functionName = "JsonStructure.checkCompressed"
-    if (json.metadata !== undefined && !JsonStructure.isObject(json.metadata)) {
-      throw new InvalidDataException(functionName, "metadata must be an object")
-    }
     const container = json.compressedTimestampsContainer
     if (!JsonStructure.isObject(container) ||
       typeof container.firstUnixTimestampMs !== "number" ||
@@ -115,15 +152,12 @@ export class JsonStructure {
   }
 
   /**
-   * Checks that decompressed JSON has the shape written by `convertToJson`, so that the conversion
-   * does not fail with a TypeError on malformed input.
+   * Checks that the timestamps and sensors of decompressed JSON have the shape written by `convertToJson`,
+   * so that the conversion does not fail with a TypeError on malformed input. The metadata is read by `parseMetadata`.
    * @throws {InvalidDataException} If the structure does not match.
    */
   static checkDecompressed(json: Record<string, unknown>) {
     const functionName = "JsonStructure.checkDecompressed"
-    if (json.metadata !== undefined && !JsonStructure.isObject(json.metadata)) {
-      throw new InvalidDataException(functionName, "metadata must be an object")
-    }
     if (!JsonStructure.isNumberArray(json.timestamps)) {
       throw new InvalidDataException(functionName, "timestamps must be an array of numbers")
     }
@@ -135,11 +169,17 @@ export class JsonStructure {
         throw new InvalidDataException(functionName, "every sensor must hold valuesType and an array of numbers as values")
       }
       const { photoplethysmograph, accelerometer, electrocardiogram } = sensor
+      if ([photoplethysmograph, accelerometer, electrocardiogram].filter(type => type !== undefined).length > 1) {
+        throw new InvalidDataException(functionName, "a sensor must not hold more than one sensor type")
+      }
       if (photoplethysmograph !== undefined && (!JsonStructure.isObject(photoplethysmograph) ||
         !JsonStructure.isOptional(photoplethysmograph.color, "string") ||
         !JsonStructure.isOptional(photoplethysmograph.wavelengthNm, "number") ||
         !JsonStructure.isOptional(photoplethysmograph.channel, "number"))) {
         throw new InvalidDataException(functionName, "photoplethysmograph is malformed")
+      }
+      if (photoplethysmograph?.color !== undefined && photoplethysmograph.wavelengthNm !== undefined) {
+        throw new InvalidDataException(functionName, "photoplethysmograph must not hold both color and wavelengthNm")
       }
       if (accelerometer !== undefined && (!JsonStructure.isObject(accelerometer) ||
         !JsonStructure.isOptional(accelerometer.type, "string") ||

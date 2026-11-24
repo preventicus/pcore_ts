@@ -254,6 +254,86 @@ describe("ConverterTest", () => {
     expect(dataPb.sensors[1].type.oneofKind === "accelerometer" && dataPb.sensors[1].type.accelerometer.channel).toBe(0)
   })
 
+  test("ConvertFromCompressedJsonWithoutChannelTest", () => {
+    // compressed JSON written before the channel fields existed
+    const dataPbWrite = compressedEcgData()
+    const json = JSON.stringify(dataPbWrite).replace("\"electrocardiogram\":{\"channel\":1}", "\"electrocardiogram\":{}")
+    expect(json).toContain("\"electrocardiogram\":{}")
+
+    const dataPb = Converter.convertFromJson(json)
+
+    expect(dataPb.sensors[0].type).toEqual({ oneofKind: "electrocardiogram", electrocardiogram: { channel: 0 } })
+    expect(() => DataPb.toBinary(dataPb)).not.toThrow()
+  })
+
+  test("ConvertFromJsonEmptyMetadataTest", () => {
+    // missing metadata fields get their default value, so the data can be written as binary afterwards
+    const sensor = { valuesType: "intValuesContainer", values: [1, 2, 3], electrocardiogram: { channel: 1 } }
+    const decompressedJson = JSON.stringify({ metadata: {}, timestamps: [10, 20, 30], sensors: [sensor] })
+    const compressedJson = JSON.stringify({ ...compressedEcgData(), metadata: {} })
+
+    for (const json of [decompressedJson, compressedJson]) {
+      const dataPb = Converter.convertFromJson(json)
+      expect(dataPb.metadata!.timezoneOffsetMin).toBe(0)
+      expect(dataPb.metadata!.device).toBeUndefined()
+      expect(() => DataPb.toBinary(dataPb)).not.toThrow()
+    }
+  })
+
+  test("ConvertFromJsonMalformedMetadataTest", () => {
+    // metadata fields of the wrong type are rejected when reading and not only when writing the binary
+    const malformedMetadata = [
+      { timezoneOffsetMin: "abc" },
+      { timezoneOffsetMin: 1.5 },
+      { device: 5 },
+      { device: { name: 5 } },
+      { device: { firmwareVersion: "1.0" } },
+      { pcoreVersion: { major: -1 } }
+    ]
+    const sensor = { valuesType: "intValuesContainer", values: [1, 2, 3], electrocardiogram: { channel: 1 } }
+    malformedMetadata.forEach(metadata => {
+      const decompressedJson = JSON.stringify({ metadata, timestamps: [10, 20, 30], sensors: [sensor] })
+      const compressedJson = JSON.stringify({ ...compressedEcgData(), metadata })
+      expect(() => Converter.convertFromJson(decompressedJson)).toThrow(InvalidDataException)
+      expect(() => Converter.convertFromJson(compressedJson)).toThrow(InvalidDataException)
+    })
+  })
+
+  test("ConvertFromCompressedJsonWrongFieldTypeTest", () => {
+    const dataPb = compressedEcgData()
+    const json = JSON.stringify(dataPb)
+    const channelNoNumber = json.replace("\"channel\":1", "\"channel\":\"x\"")
+    const twoSensorTypes = json.replace("\"electrocardiogram\":{", "\"accelerometer\":{\"type\":1,\"channel\":0},\"electrocardiogram\":{")
+    const unknownSensorType = json.replace("\"oneofKind\":\"electrocardiogram\"", "\"oneofKind\":\"thermometer\"")
+    // the wrong type sits behind the first 16 sensors
+    const sensors = Array.from({ length: 20 }, () => structuredClone(dataPb.sensors[0]))
+    const manySensors = JSON.stringify({ ...dataPb, sensors })
+    const lastSensorWrong = JSON.stringify({
+      ...dataPb,
+      sensors: [...sensors.slice(0, 19), { ...sensors[19], type: { oneofKind: "electrocardiogram", electrocardiogram: { channel: "x" } } }]
+    })
+
+    expect(Converter.convertFromJson(manySensors).sensors.length).toBe(20)
+    expect(() => Converter.convertFromJson(channelNoNumber)).toThrow(InvalidDataException)
+    expect(() => Converter.convertFromJson(twoSensorTypes)).toThrow(InvalidDataException)
+    expect(() => Converter.convertFromJson(unknownSensorType)).toThrow(InvalidDataException)
+    expect(() => Converter.convertFromJson(lastSensorWrong)).toThrow(InvalidDataException)
+  })
+
+  test("ConvertFromDecompressedJsonTwoSensorTypesTest", () => {
+    // a sensor has exactly one sensor type and a photoplethysmograph exactly one light
+    const twoSensorTypes = JSON.stringify({
+      timestamps: [10, 20, 30],
+      sensors: [{ valuesType: "intValuesContainer", values: [1, 2, 3], accelerometer: { type: "X_COORDINATE" }, electrocardiogram: { channel: 1 } }]
+    })
+    const twoLights = JSON.stringify({
+      timestamps: [10, 20, 30],
+      sensors: [{ valuesType: "intValuesContainer", values: [1, 2, 3], photoplethysmograph: { color: "GREEN", wavelengthNm: 530 } }]
+    })
+    expect(() => Converter.convertFromJson(twoSensorTypes)).toThrow(InvalidDataException)
+    expect(() => Converter.convertFromJson(twoLights)).toThrow(InvalidDataException)
+  })
+
   test("ConvertFromJsonUnsafeIntegerTest", () => {
     // JSON.parse reads integers as number; integers outside of the safe range are rejected
     const decompressedJson = "{\"timestamps\": [10, 20], \"sensors\": [{\"valuesType\": \"intValuesContainer\", \"values\": [9223372036854775807, 0], \"electrocardiogram\": {\"channel\": 1}}]}"

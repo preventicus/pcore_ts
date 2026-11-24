@@ -134,15 +134,14 @@ export class Converter {
   static convertFromJson(json: string): DataPb {
     const parsedJson = JsonStructure.parseObject(json)
     if ("compressedTimestampsContainer" in parsedJson) {
-      JsonStructure.checkCompressed(parsedJson)
-      const dataPb = parsedJson as unknown as DataPb
+      const dataPb = JsonStructure.parseCompressed(parsedJson)
       Inspector.validateCompressed(dataPb)
       return dataPb
     }
     JsonStructure.checkDecompressed(parsedJson)
     const decompressedPcoreJson = parsedJson as unknown as DecompressedPcoreJson
     const data: Data = {
-      metadata: decompressedPcoreJson.metadata,
+      metadata: JsonStructure.parseMetadata(parsedJson.metadata),
       timestamps: decompressedPcoreJson.timestamps,
       sensors: decompressedPcoreJson.sensors.map(Converter.parseFromDecompressedSensor)
     }
