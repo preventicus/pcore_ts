@@ -31,97 +31,11 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 */
 
-import { getIntValues, getDoubleValues, getAccelerometerType, getPhotoplethysmographWavelength, getPhotoplethysmographColor, getElectrocardiogramChannel } from "@/util/SensorAccessors"
+import { getIntValues, getDoubleValues } from "@/util/SensorAccessors"
 import { SensorBuilder } from "@/builder/SensorBuilder"
-import { AccelerometerType, Color } from "@/ProtobufDefinitions"
 import { SensorDecompressor } from "@/decompress/SensorDecompressor"
 
 describe("SensorDecompressorTest", () => {
-  // The following four tests have no spec counterpart: the spec test cases hold sensor values only.
-  // These tests check that the sensor type and its fields are carried over unchanged.
-  test("ACCTest", () => {
-    const sensor = new SensorBuilder()
-      .withIntValues([3, 1])
-      .withAccelerometerType(AccelerometerType.X_COORDINATE)
-      .build()
-
-    const decompressed = SensorDecompressor.decompress(sensor)
-
-    expect(decompressed.type.oneofKind).not.toBe("photoplethysmograph")
-    expect(decompressed.type.oneofKind).not.toBe("electrocardiogram")
-    expect(decompressed.type.oneofKind).toBe("accelerometer")
-
-    expect(decompressed.values.oneofKind).toBe("intValuesContainer")
-    expect(decompressed.values.oneofKind).not.toBe("doubleValuesContainer")
-
-    expect(getAccelerometerType(decompressed)).toBe(AccelerometerType.X_COORDINATE)
-
-    expect(getIntValues(decompressed)!.length).toBe(2)
-    expect(getIntValues(decompressed)).toEqual([3, 4])
-  })
-
-  test("PPGWavelengthTest", () => {
-    const sensor = new SensorBuilder()
-      .withDoubleValues([3.1234, 4.1234])
-      .withPhotoplethysmographWavelength(300)
-      .build()
-
-    const decompressed = SensorDecompressor.decompress(sensor)
-
-    expect(decompressed.type.oneofKind).not.toBe("accelerometer")
-    expect(decompressed.type.oneofKind).toBe("photoplethysmograph")
-    expect(decompressed.type.oneofKind).not.toBe("electrocardiogram")
-
-    expect(decompressed.values.oneofKind).not.toBe("intValuesContainer")
-    expect(decompressed.values.oneofKind).toBe("doubleValuesContainer")
-
-    expect(getPhotoplethysmographWavelength(decompressed)).toBe(300)
-
-    expect(getDoubleValues(decompressed)!.length).toBe(2)
-    expect(getDoubleValues(decompressed)).toEqual([3.1234, 4.1234])
-  })
-
-  test("PPGColorTest", () => {
-    const sensor = new SensorBuilder()
-      .withDoubleValues([3.123, 4.123])
-      .withPhotoplethysmographColor(Color.RED)
-      .build()
-
-    const decompressed = SensorDecompressor.decompress(sensor)
-
-    expect(decompressed.type.oneofKind).not.toBe("accelerometer")
-    expect(decompressed.type.oneofKind).toBe("photoplethysmograph")
-    expect(decompressed.type.oneofKind).not.toBe("electrocardiogram")
-
-    expect(decompressed.values.oneofKind).not.toBe("intValuesContainer")
-    expect(decompressed.values.oneofKind).toBe("doubleValuesContainer")
-
-    expect(getDoubleValues(decompressed)!.length).toBe(2)
-    expect(getDoubleValues(decompressed)).toEqual([3.123, 4.123])
-
-    expect(getPhotoplethysmographColor(decompressed)).toBe(Color.RED)
-  })
-
-  test("ECGTest", () => {
-    const sensor = new SensorBuilder()
-      .withIntValues([100, 100])
-      .withElectrocardiogramChannel(2)
-      .build()
-    const decompressed = SensorDecompressor.decompress(sensor)
-
-    expect(decompressed.type.oneofKind).toBe("electrocardiogram")
-    expect(decompressed.type.oneofKind).not.toBe("photoplethysmograph")
-    expect(decompressed.type.oneofKind).not.toBe("accelerometer")
-
-    expect(decompressed.values.oneofKind).toBe("intValuesContainer")
-    expect(decompressed.values.oneofKind).not.toBe("doubleValuesContainer")
-
-    expect(getElectrocardiogramChannel(decompressed)).toBe(2)
-
-    expect(getIntValues(decompressed)!.length).toBe(2)
-    expect(getIntValues(decompressed)).toEqual([100, 200])
-  })
-
   test("MaxValueTest", () => {
     const INT32_MAX = 2147483647 // 2^31 - 1
     const INT32_MIN = -2147483648 // -2^31

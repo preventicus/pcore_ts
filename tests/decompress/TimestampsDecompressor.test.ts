@@ -153,7 +153,6 @@ describe("TimestampsDecompressorTest", () => {
   })
 
   test("ThreeSectionDifferentBigGapsTest", () => {
-    // no spec counterpart: an additional case of this library with three sections of different inner durations and larger gaps between them
     const compressedTimestampsContainer = fillCompressedTimestampsContainerPb(
       1,
       [1, 3, 4],

@@ -33,95 +33,9 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 import { SensorCompressor } from "@/compress/SensorCompressor"
 import { SensorBuilder } from "@/builder/SensorBuilder"
-import { AccelerometerType, Color } from "@/ProtobufDefinitions"
-import { getIntValues, getDoubleValues, getAccelerometerType, getPhotoplethysmographWavelength, getPhotoplethysmographColor, getElectrocardiogramChannel } from "@/util/SensorAccessors"
+import { getIntValues, getDoubleValues } from "@/util/SensorAccessors"
 
 describe("SensorCompressorTest", () => {
-  // The following four tests have no spec counterpart: the spec test cases hold sensor values only.
-  // These tests check that the sensor type and its fields are carried over unchanged.
-  test("ACCTest", () => {
-    const sensor = new SensorBuilder()
-      .withIntValues([3, 4])
-      .withAccelerometerType(AccelerometerType.X_COORDINATE)
-      .build()
-
-    const compressed = SensorCompressor.compress(sensor)
-
-    expect(compressed.type.oneofKind).toBe("accelerometer")
-    expect(compressed.type.oneofKind).not.toBe("photoplethysmograph")
-    expect(compressed.type.oneofKind).not.toBe("electrocardiogram")
-
-    expect(getAccelerometerType(compressed)).toBe(AccelerometerType.X_COORDINATE)
-
-    expect(compressed.values.oneofKind).toBe("intValuesContainer")
-    expect(compressed.values.oneofKind).not.toBe("doubleValuesContainer")
-
-    expect(getIntValues(compressed)!.length).toBe(2)
-    expect(getIntValues(compressed)).toEqual([3, 1])
-  })
-
-  test("PPGWavelengthTest", () => {
-    const sensor = new SensorBuilder()
-      .withDoubleValues([3.1234, 4.1234])
-      .withPhotoplethysmographWavelength(300)
-      .build()
-
-    const compressed = SensorCompressor.compress(sensor)
-
-    expect(compressed.type.oneofKind).not.toBe("accelerometer")
-    expect(compressed.type.oneofKind).toBe("photoplethysmograph")
-    expect(compressed.type.oneofKind).not.toBe("electrocardiogram")
-
-    expect(getPhotoplethysmographWavelength(compressed)).toBe(300)
-
-    expect(compressed.values.oneofKind).not.toBe("intValuesContainer")
-    expect(compressed.values.oneofKind).toBe("doubleValuesContainer")
-
-    expect(getDoubleValues(compressed)!.length).toBe(2)
-    expect(getDoubleValues(compressed)).toEqual([3.1234, 4.1234])
-  })
-
-  test("PPGColorTest", () => {
-    const sensor = new SensorBuilder()
-      .withDoubleValues([3.123, 4.123])
-      .withPhotoplethysmographColor(Color.RED)
-      .build()
-
-    const compressed = SensorCompressor.compress(sensor)
-
-    expect(compressed.type.oneofKind).not.toBe("accelerometer")
-    expect(compressed.type.oneofKind).toBe("photoplethysmograph")
-    expect(compressed.type.oneofKind).not.toBe("electrocardiogram")
-
-    expect(getPhotoplethysmographColor(compressed)).toBe(Color.RED)
-
-    expect(compressed.values.oneofKind).not.toBe("intValuesContainer")
-    expect(compressed.values.oneofKind).toBe("doubleValuesContainer")
-
-    expect(getDoubleValues(compressed)!.length).toBe(2)
-    expect(getDoubleValues(compressed)).toEqual([3.123, 4.123])
-  })
-
-  test("ECGTest", () => {
-    const sensor = new SensorBuilder()
-      .withIntValues([100, 200])
-      .withElectrocardiogramChannel(2)
-      .build()
-    const compressed = SensorCompressor.compress(sensor)
-
-    expect(compressed.type.oneofKind).not.toBe("accelerometer")
-    expect(compressed.type.oneofKind).not.toBe("photoplethysmograph")
-    expect(compressed.type.oneofKind).toBe("electrocardiogram")
-
-    expect(getElectrocardiogramChannel(compressed)).toBe(2)
-
-    expect(compressed.values.oneofKind).toBe("intValuesContainer")
-    expect(compressed.values.oneofKind).not.toBe("doubleValuesContainer")
-
-    expect(getIntValues(compressed)!.length).toBe(2)
-    expect(getIntValues(compressed)).toEqual([100, 100])
-  })
-
   test("MaxValueTest", () => {
     const INT32_MAX = 2147483647 // 2^31 - 1
     const INT32_MIN = -2147483648 // -2^31

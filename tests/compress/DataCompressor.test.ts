@@ -33,8 +33,6 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 import { AccelerometerType, Color, DataPb, Sensor } from "@/ProtobufDefinitions"
 import { DataBuilder, DataCompressor, InvalidDataException, MetadataBuilder, SensorBuilder, WrongValueException } from "@/index"
-import { PcoreVersion } from "@generated/pcoreVersion"
-import { getIntValues, getDoubleValues, getAccelerometerType, getPhotoplethysmographWavelength, getPhotoplethysmographColor, getElectrocardiogramChannel } from "@/util/SensorAccessors"
 
 describe("DataCompressorTest", () => {
   test("EmptyWithoutCompressorTest", () => {
@@ -328,163 +326,105 @@ describe("DataCompressorTest", () => {
     expect(() => compress([1, 2, 3], [sensor])).toThrow(WrongValueException)
   })
 
+  // test cases of unittest/compression/compressionData.json, in the order of the spec
+  test("PPGColorSensorTest", () => {
+    const dataPb = compress([1, 2, 3, 4, 5], [
+      new SensorBuilder().withIntValues([0, 3, 1, 3, 2]).withPhotoplethysmographColor(Color.RED).build()
+    ])
+
+    expect(dataPb.compressedTimestampsContainer).toEqual({ firstUnixTimestampMs: 1, outerSectionsDurationsMs: [0], innerSectionsDurationsMs: [1], sectionsSizes: [5] })
+    expect(dataPb.sensors).toEqual([
+      new SensorBuilder().withIntValues([0, 3, -2, 2, -1]).withPhotoplethysmographColor(Color.RED).build()
+    ])
+  })
+
+  test("PPGWavelengthSensorTest", () => {
+    const dataPb = compress([1, 2, 3], [
+      new SensorBuilder().withDoubleValues([3.1234, 4.1234, 5.5]).withPhotoplethysmographWavelength(530).build()
+    ])
+
+    expect(dataPb.compressedTimestampsContainer).toEqual({ firstUnixTimestampMs: 1, outerSectionsDurationsMs: [0], innerSectionsDurationsMs: [1], sectionsSizes: [3] })
+    expect(dataPb.sensors).toEqual([
+      new SensorBuilder().withDoubleValues([3.1234, 4.1234, 5.5]).withPhotoplethysmographWavelength(530).build()
+    ])
+  })
+
+  test("ACCSensorTest", () => {
+    const dataPb = compress([1, 2, 3], [
+      new SensorBuilder().withIntValues([3, 4, -1]).withAccelerometerType(AccelerometerType.X_COORDINATE).build()
+    ])
+
+    expect(dataPb.compressedTimestampsContainer).toEqual({ firstUnixTimestampMs: 1, outerSectionsDurationsMs: [0], innerSectionsDurationsMs: [1], sectionsSizes: [3] })
+    expect(dataPb.sensors).toEqual([
+      new SensorBuilder().withIntValues([3, 1, -5]).withAccelerometerType(AccelerometerType.X_COORDINATE).build()
+    ])
+  })
+
+  test("ECGSensorTest", () => {
+    const dataPb = compress([1, 2, 3], [
+      new SensorBuilder().withIntValues([100, 200, 150]).withElectrocardiogramChannel(2).build()
+    ])
+
+    expect(dataPb.compressedTimestampsContainer).toEqual({ firstUnixTimestampMs: 1, outerSectionsDurationsMs: [0], innerSectionsDurationsMs: [1], sectionsSizes: [3] })
+    expect(dataPb.sensors).toEqual([
+      new SensorBuilder().withIntValues([100, 100, -50]).withElectrocardiogramChannel(2).build()
+    ])
+  })
+
   test("ChannelsTest", () => {
-    // no spec counterpart: the channel of a sensor type is carried over unchanged
-    const sensors = [
+    const dataPb = compress([10, 20, 30], [
       new SensorBuilder().withIntValues([1, 2, 3]).withPhotoplethysmographWavelength(530, 3).build(),
-      new SensorBuilder().withIntValues([4, 5, 6]).withAccelerometerType(AccelerometerType.X_COORDINATE, 2).build()
-    ]
-    const dataPb = compress([1, 2, 3], sensors)
-    expect(dataPb.sensors[0].type.oneofKind === "photoplethysmograph" && dataPb.sensors[0].type.photoplethysmograph.channel).toBe(3)
-    expect(dataPb.sensors[1].type.oneofKind === "accelerometer" && dataPb.sensors[1].type.accelerometer.channel).toBe(2)
+      new SensorBuilder().withIntValues([7, 8, 9]).withPhotoplethysmographWavelength(530, 4).build(),
+      new SensorBuilder().withIntValues([4, 5, 6]).withAccelerometerType(AccelerometerType.X_COORDINATE, 3).build()
+    ])
+
+    expect(dataPb.compressedTimestampsContainer).toEqual({ firstUnixTimestampMs: 10, outerSectionsDurationsMs: [0], innerSectionsDurationsMs: [10], sectionsSizes: [3] })
+    expect(dataPb.sensors).toEqual([
+      new SensorBuilder().withIntValues([1, 1, 1]).withPhotoplethysmographWavelength(530, 3).build(),
+      new SensorBuilder().withIntValues([7, 1, 1]).withPhotoplethysmographWavelength(530, 4).build(),
+      new SensorBuilder().withIntValues([4, 1, 1]).withAccelerometerType(AccelerometerType.X_COORDINATE, 3).build()
+    ])
+  })
+
+  test("TimeZoneOffsetTest", () => {
+    const dataPb = compress([1, 2, 3], [
+      new SensorBuilder().withIntValues([1, 2, 3]).withElectrocardiogramChannel(1).build()
+    ], -120)
+
+    expect(dataPb.compressedTimestampsContainer).toEqual({ firstUnixTimestampMs: 1, outerSectionsDurationsMs: [0], innerSectionsDurationsMs: [1], sectionsSizes: [3] })
+    expect(dataPb.sensors).toEqual([
+      new SensorBuilder().withIntValues([1, 1, 1]).withElectrocardiogramChannel(1).build()
+    ])
+    expect(dataPb.metadata!.timezoneOffsetMin).toBe(-120)
   })
 
   test("CompleteTest", () => {
-    // no spec counterpart: a complete example with metadata, timestamps and several sensors
-    const metadata = new MetadataBuilder()
-      .withTimezoneOffset(310)
-      .withDeviceId("I3212JH")
-      .withDeviceFirmwareVersion(3, 2, 1)
-      .withDeviceName("Name")
-      .withDeviceManufacturer("Xw2")
-      .build()
+    const dataPb = compress([1, 2, 3, 13, 23], [
+      new SensorBuilder().withIntValues([0, 3, 1, 3, 2]).withPhotoplethysmographColor(Color.RED).build(),
+      new SensorBuilder().withIntValues([3, 5, 2, 1, 4]).withPhotoplethysmographColor(Color.GREEN).build(),
+      new SensorBuilder().withIntValues([0, 0, 0, 0, 0]).withPhotoplethysmographColor(Color.BLUE).build(),
+      new SensorBuilder().withIntValues([4, 6, 3, 2, 4]).withPhotoplethysmographWavelength(400).build(),
+      new SensorBuilder().withIntValues([0, 0, 0, -200, 0]).withAccelerometerType(AccelerometerType.X_COORDINATE).build(),
+      new SensorBuilder().withIntValues([0, 0, 0, 200, 0]).withAccelerometerType(AccelerometerType.Y_COORDINATE).build(),
+      new SensorBuilder().withIntValues([0, 100, 0, -200, 0]).withAccelerometerType(AccelerometerType.Z_COORDINATE).build(),
+      new SensorBuilder().withDoubleValues([3.21274389, 8.723849, 400.782934, 43.83924, 64.34894]).withAccelerometerType(AccelerometerType.EUCLIDEAN_DIFFERENCES_NORM).build(),
+      new SensorBuilder().withIntValues([0, 0, 0, 40, 0]).withElectrocardiogramChannel(1).build(),
+      new SensorBuilder().withIntValues([0, 40, 0, 20, 0]).withElectrocardiogramChannel(2).build()
+    ], 310)
 
-    const sensors: Sensor[] = []
-
-    sensors.push(new SensorBuilder()
-      .withIntValues([0, 3, 1, 3, 2])
-      .withPhotoplethysmographColor(Color.RED)
-      .build()
-    )
-
-    sensors.push(new SensorBuilder()
-      .withIntValues([3, 5, 2, 1, 4])
-      .withPhotoplethysmographColor(Color.GREEN)
-      .build()
-    )
-
-    sensors.push(new SensorBuilder()
-      .withIntValues([0, 0, 0, 0, 0])
-      .withPhotoplethysmographColor(Color.BLUE)
-      .build()
-    )
-
-    sensors.push(new SensorBuilder()
-      .withIntValues([4, 6, 3, 2, 4])
-      .withPhotoplethysmographWavelength(400)
-      .build()
-    )
-
-    sensors.push(new SensorBuilder()
-      .withIntValues([0, 0, 0, -200, 0])
-      .withAccelerometerType(AccelerometerType.X_COORDINATE)
-      .build()
-    )
-
-    sensors.push(new SensorBuilder()
-      .withIntValues([0, 0, 0, 200, 0])
-      .withAccelerometerType(AccelerometerType.Y_COORDINATE)
-      .build()
-    )
-
-    sensors.push(new SensorBuilder()
-      .withIntValues([0, 100, 0, -200, 0])
-      .withAccelerometerType(AccelerometerType.Z_COORDINATE)
-      .build()
-    )
-
-    sensors.push(new SensorBuilder()
-      .withDoubleValues([3.21274389, 8.723849, 400.782934, 43.839240, 64.34894])
-      .withAccelerometerType(AccelerometerType.EUCLIDEAN_DIFFERENCES_NORM)
-      .build()
-    )
-
-    sensors.push(new SensorBuilder()
-      .withIntValues([0, 0, 0, 40, 0])
-      .withElectrocardiogramChannel(1)
-      .build()
-    )
-
-    sensors.push(new SensorBuilder()
-      .withIntValues([0, 40, 0, 20, 0])
-      .withElectrocardiogramChannel(2)
-      .build()
-    )
-
-    const data = new DataBuilder()
-      .withMetadata(metadata)
-      .withTimestamps([1, 2, 3, 4, 5])
-      .withSensors(sensors)
-      .build()
-
-    const dataPb = DataCompressor.compress(data)
-
-    expect(dataPb.metadata).toBeDefined()
-
-    expect(dataPb.metadata?.device).toBeDefined()
-    expect(dataPb.metadata?.device?.name).toBe("Name")
-    expect(dataPb.metadata?.device?.manufacturer).toBe("Xw2")
-    expect(dataPb.metadata?.device?.id).toBe("I3212JH")
-    expect(dataPb.metadata?.device?.firmwareVersion).toBeDefined()
-    expect(dataPb.metadata?.device?.firmwareVersion?.major).toBe(3)
-    expect(dataPb.metadata?.device?.firmwareVersion?.minor).toBe(2)
-    expect(dataPb.metadata?.device?.firmwareVersion?.patch).toBe(1)
-
-    expect(dataPb.metadata?.pcoreVersion).toBeDefined()
-    expect(dataPb.metadata?.pcoreVersion?.major).toBe(PcoreVersion.major)
-    expect(dataPb.metadata?.pcoreVersion?.minor).toBe(PcoreVersion.minor)
-    expect(dataPb.metadata?.pcoreVersion?.patch).toBe(PcoreVersion.patch)
-
-    expect(dataPb.metadata?.timezoneOffsetMin).toBe(310)
-
-    expect(dataPb.compressedTimestampsContainer?.firstUnixTimestampMs).toBe(1)
-    expect(dataPb.compressedTimestampsContainer?.sectionsSizes.length).toBe(1)
-    expect(dataPb.compressedTimestampsContainer?.sectionsSizes).toEqual([5])
-    expect(dataPb.compressedTimestampsContainer?.innerSectionsDurationsMs.length).toBe(1)
-    expect(dataPb.compressedTimestampsContainer?.innerSectionsDurationsMs).toEqual([1])
-    expect(dataPb.compressedTimestampsContainer?.outerSectionsDurationsMs.length).toBe(1)
-    expect(dataPb.compressedTimestampsContainer?.outerSectionsDurationsMs).toEqual([0])
-
-    expect(dataPb.sensors.length).toBe(10)
-
-    expect(dataPb.sensors[0].type.oneofKind).toBe("photoplethysmograph")
-    expect(getPhotoplethysmographColor(dataPb.sensors[0])).toBe(Color.RED)
-    expect(getIntValues(dataPb.sensors[0])).toEqual([0, 3, -2, 2, -1])
-
-    expect(dataPb.sensors[1].type.oneofKind).toBe("photoplethysmograph")
-    expect(getPhotoplethysmographColor(dataPb.sensors[1])).toBe(Color.GREEN)
-    expect(getIntValues(dataPb.sensors[1])).toEqual([3, 2, -3, -1, 3])
-
-    expect(dataPb.sensors[2].type.oneofKind).toBe("photoplethysmograph")
-    expect(getPhotoplethysmographColor(dataPb.sensors[2])).toBe(Color.BLUE)
-    expect(getIntValues(dataPb.sensors[2])).toEqual([0, 0, 0, 0, 0])
-
-    expect(dataPb.sensors[3].type.oneofKind).toBe("photoplethysmograph")
-    expect(getPhotoplethysmographWavelength(dataPb.sensors[3])).toBe(400)
-    expect(getIntValues(dataPb.sensors[3])).toEqual([4, 2, -3, -1, 2])
-
-    expect(dataPb.sensors[4].type.oneofKind).toBe("accelerometer")
-    expect(getAccelerometerType(dataPb.sensors[4])).toBe(AccelerometerType.X_COORDINATE)
-    expect(getIntValues(dataPb.sensors[4])).toEqual([0, 0, 0, -200, 200])
-
-    expect(dataPb.sensors[5].type.oneofKind).toBe("accelerometer")
-    expect(getAccelerometerType(dataPb.sensors[5])).toBe(AccelerometerType.Y_COORDINATE)
-    expect(getIntValues(dataPb.sensors[5])).toEqual([0, 0, 0, 200, -200])
-
-    expect(dataPb.sensors[6].type.oneofKind).toBe("accelerometer")
-    expect(getAccelerometerType(dataPb.sensors[6])).toBe(AccelerometerType.Z_COORDINATE)
-    expect(getIntValues(dataPb.sensors[6])).toEqual([0, 100, -100, -200, 200])
-
-    expect(dataPb.sensors[7].type.oneofKind).toBe("accelerometer")
-    expect(getAccelerometerType(dataPb.sensors[7])).toBe(AccelerometerType.EUCLIDEAN_DIFFERENCES_NORM)
-    expect(getDoubleValues(dataPb.sensors[7])).toEqual([3.21274389, 8.723849, 400.782934, 43.839240, 64.34894])
-
-    expect(dataPb.sensors[8].type.oneofKind).toBe("electrocardiogram")
-    expect(getElectrocardiogramChannel(dataPb.sensors[8])).toBe(1)
-    expect(getIntValues(dataPb.sensors[8])).toEqual([0, 0, 0, 40, -40])
-
-    expect(dataPb.sensors[9].type.oneofKind).toBe("electrocardiogram")
-    expect(getElectrocardiogramChannel(dataPb.sensors[9])).toBe(2)
-    expect(getIntValues(dataPb.sensors[9])).toEqual([0, 40, -40, 20, -20])
+    expect(dataPb.compressedTimestampsContainer).toEqual({ firstUnixTimestampMs: 1, outerSectionsDurationsMs: [0, 12], innerSectionsDurationsMs: [1, 10], sectionsSizes: [3, 2] })
+    expect(dataPb.sensors).toEqual([
+      new SensorBuilder().withIntValues([0, 3, -2, 2, -1]).withPhotoplethysmographColor(Color.RED).build(),
+      new SensorBuilder().withIntValues([3, 2, -3, -1, 3]).withPhotoplethysmographColor(Color.GREEN).build(),
+      new SensorBuilder().withIntValues([0, 0, 0, 0, 0]).withPhotoplethysmographColor(Color.BLUE).build(),
+      new SensorBuilder().withIntValues([4, 2, -3, -1, 2]).withPhotoplethysmographWavelength(400).build(),
+      new SensorBuilder().withIntValues([0, 0, 0, -200, 200]).withAccelerometerType(AccelerometerType.X_COORDINATE).build(),
+      new SensorBuilder().withIntValues([0, 0, 0, 200, -200]).withAccelerometerType(AccelerometerType.Y_COORDINATE).build(),
+      new SensorBuilder().withIntValues([0, 100, -100, -200, 200]).withAccelerometerType(AccelerometerType.Z_COORDINATE).build(),
+      new SensorBuilder().withDoubleValues([3.21274389, 8.723849, 400.782934, 43.83924, 64.34894]).withAccelerometerType(AccelerometerType.EUCLIDEAN_DIFFERENCES_NORM).build(),
+      new SensorBuilder().withIntValues([0, 0, 0, 40, -40]).withElectrocardiogramChannel(1).build(),
+      new SensorBuilder().withIntValues([0, 40, -40, 20, -20]).withElectrocardiogramChannel(2).build()
+    ])
+    expect(dataPb.metadata!.timezoneOffsetMin).toBe(310)
   })
 })
