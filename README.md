@@ -69,15 +69,14 @@ Node.js 18 or newer is required (the library uses `structuredClone`).
 
 ### Using the library in another project
 
-The package is called `@preventicus/pcore`. It can be installed directly from this git repository; npm then
-compiles the library on its own (script `prepare`):
+The package is called `@preventicus/pcore`. It is not published in a package registry; install it directly from
+this git repository. npm then compiles the library on its own (script `prepare`):
 
 ```
 npm install git+ssh://git@github.com/preventicus/pcore_ts.git#<branch, tag or commit>
 ```
 
-Without `#...` npm takes the default branch. If the package is available in a package registry that your project
-is configured for, `npm install @preventicus/pcore` does the same.
+Without `#...` npm takes the default branch.
 
 Afterwards import from the package name; the type definitions are included:
 
