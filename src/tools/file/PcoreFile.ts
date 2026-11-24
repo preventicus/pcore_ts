@@ -37,6 +37,20 @@ import { Inspector } from "@tools/inspector/Inspector"
 import * as fs from "node:fs"
 
 /**
+ * Options of `PcoreFile.readPcoreBinary`.
+ */
+export interface ReadPcoreBinaryOptions {
+  /**
+   * Whether the decoded data is validated with `Inspector.validateCompressed`. Defaults to `true`.
+   *
+   * Set it to `false` only to examine a file that the validation rejects, e.g. to find out what is wrong with it.
+   * The returned data is then not checked: the `get...` methods of the `Inspector` may return meaningless
+   * results for it, and decompressing or converting it still fails.
+   */
+  validate?: boolean
+}
+
+/**
  * Utility class for reading and writing Pcore data in binary and JSON formats.
  * It is not named `File`, because that is a global class of browsers and Node.js.
  */
@@ -59,15 +73,19 @@ export class PcoreFile {
    * Data from a file is therefore valid compressed data, as the `Inspector` and the `Converter` expect it.
    * Errors of the file system, e.g. a missing file, are passed on unchanged.
    * @param path The path to the binary file
-   * @returns The deserialized and validated DataPb object
+   * @param options Optional. `{ validate: false }` returns the decoded data without validating it,
+   *                which is meant for examining a file that the validation rejects
+   * @returns The deserialized DataPb object, validated unless the validation was switched off
    * @throws {InvalidDataException} If the content cannot be decoded, e.g. a truncated file or a file of
    *                                another format, or if the data is structurally inconsistent, e.g. empty
    * @throws {WrongValueException} If a single value is outside of its allowed range, e.g. a 64-bit integer
    *                               that is not a safe JavaScript integer
    */
-  static readPcoreBinary(path: string): DataPb {
+  static readPcoreBinary(path: string, options: ReadPcoreBinaryOptions = {}): DataPb {
     const dataPb = PcoreFile.decode(fs.readFileSync(path))
-    Inspector.validateCompressed(dataPb)
+    if (options.validate ?? true) {
+      Inspector.validateCompressed(dataPb)
+    }
     return dataPb
   }
 

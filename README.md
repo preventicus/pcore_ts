@@ -54,6 +54,13 @@ Data is validated wherever it enters or leaves the library: `PcoreFile.readPcore
 `InvalidDataException` or a `WrongValueException` for invalid data. The `get...` methods of the `Inspector` therefore do not
 validate again. For a protobuf object that was built by hand, call `Inspector.validateCompressed` before inspecting it.
 
+To examine a `.pcore` file that the validation rejects, switch the validation off explicitly. The file is then only
+decoded; a file that cannot be decoded at all is still rejected with an `InvalidDataException`:
+
+```
+const dataPb = PcoreFile.readPcoreBinary("rejected.pcore", { validate: false })
+```
+
 ---
 
 ## Installation

@@ -74,7 +74,8 @@ export type SensorType = Sensor["type"]
  * Utility class for inspecting compressed data without full decompression, and for validating data.
  *
  * The `get...` methods expect valid compressed data and do not validate it themselves, so that they stay cheap.
- * Data returned by `PcoreFile.readPcoreBinary`, `Converter.convertFromJson` and `DataCompressor.compress` is valid.
+ * Data returned by `PcoreFile.readPcoreBinary` (unless its validation was switched off), `Converter.convertFromJson`
+ * and `DataCompressor.compress` is valid.
  * A `DataPb` object from any other source has to be checked with `Inspector.validateCompressed` first;
  * for invalid data the results of the `get...` methods are meaningless.
  */

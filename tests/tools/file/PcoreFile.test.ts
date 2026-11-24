@@ -35,7 +35,7 @@ import * as fs from "fs"
 import * as os from "os"
 import * as nodePath from "path"
 import { AccelerometerType, Color, DataPb } from "@/ProtobufDefinitions"
-import { Converter, DataBuilder, DataCompressor, DataForm, File, InvalidDataException, PcoreFile, SensorBuilder, WrongValueException } from "@/index"
+import { Converter, DataBuilder, DataCompressor, DataDecompressor, DataForm, File, InvalidDataException, PcoreFile, SensorBuilder, WrongValueException } from "@/index"
 import { PcoreVersion } from "@generated/pcoreVersion"
 import { buildNormalData } from "@tests/helpers/normalData"
 
@@ -89,6 +89,31 @@ describe("PcoreFileTest", () => {
 
     expect(() => PcoreFile.readPcoreBinary(inconsistentPath)).toThrow(InvalidDataException)
     expect(() => PcoreFile.readPcoreBinary(wrongValuePath)).toThrow(WrongValueException)
+  })
+
+  test("PcoreReadWithoutValidationTest", () => {
+    // a file that the validation rejects can still be read for examining it, if the validation is switched off explicitly
+    const sensor = new SensorBuilder().withIntValues([7, 8, 9]).withElectrocardiogramChannel(1).build()
+    const invalidDataPb = DataCompressor.compress(new DataBuilder().withTimestamps([1, 2, 3]).withSensor(sensor).build())
+    invalidDataPb.metadata!.timezoneOffsetMin = 900
+    const invalidPath = nodePath.join(directory, "withoutValidationTest.pcore")
+    fs.writeFileSync(invalidPath, DataPb.toBinary(invalidDataPb))
+    const truncatedPath = nodePath.join(directory, "withoutValidationTruncatedTest.pcore")
+    fs.writeFileSync(truncatedPath, DataPb.toBinary(invalidDataPb).subarray(0, 10))
+
+    // validating is the default, also for an options object without the field
+    expect(() => PcoreFile.readPcoreBinary(invalidPath)).toThrow(WrongValueException)
+    expect(() => PcoreFile.readPcoreBinary(invalidPath, {})).toThrow(WrongValueException)
+    expect(() => PcoreFile.readPcoreBinary(invalidPath, { validate: true })).toThrow(WrongValueException)
+
+    const dataPbRead = PcoreFile.readPcoreBinary(invalidPath, { validate: false })
+    expect(dataPbRead).toEqual(invalidDataPb)
+    expect(dataPbRead.metadata!.timezoneOffsetMin).toBe(900)
+    // the data stays invalid for everything that validates
+    expect(() => DataDecompressor.decompress(dataPbRead)).toThrow(WrongValueException)
+
+    // a file that cannot be decoded is rejected in any case
+    expect(() => PcoreFile.readPcoreBinary(truncatedPath, { validate: false })).toThrow(InvalidDataException)
   })
 
   test("PcoreMinimalDataTest", () => {
