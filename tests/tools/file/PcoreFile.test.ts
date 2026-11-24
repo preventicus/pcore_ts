@@ -35,8 +35,9 @@ import * as fs from "fs"
 import * as os from "os"
 import * as nodePath from "path"
 import { AccelerometerType, Color, DataPb } from "@/ProtobufDefinitions"
-import { Converter, DataBuilder, DataCompressor, DataDecompressor, DataForm, File, InvalidDataException, MetadataBuilder, PcoreFile, SensorBuilder, WrongValueException } from "@/index"
+import { Converter, DataBuilder, DataCompressor, DataDecompressor, DataForm, File, InvalidDataException, PcoreFile, SensorBuilder, WrongValueException } from "@/index"
 import { PcoreVersion } from "@generated/pcoreVersion"
+import { buildNormalData } from "@tests/helpers/normalData"
 
 describe("PcoreFileTest", () => {
   // every run writes its files into a fresh directory, so no file of an earlier run can make a test pass
@@ -138,44 +139,7 @@ describe("PcoreFileTest", () => {
   test("PcoreNormalDataTest", () => {
     const path = nodePath.join(directory, "normalTest.pcore")
 
-    const metadata = new MetadataBuilder()
-      .withTimezoneOffset(400)
-      .withDeviceFirmwareVersion(3, 2, 1)
-      .withDeviceManufacturer("ABC")
-      .withDeviceName("xyz")
-      .withDeviceId("123")
-      .build()
-
-    const timestamps = [10, 20, 30]
-
-    const sensorECG = new SensorBuilder()
-      .withIntValues([1, 2, 3])
-      .withElectrocardiogramChannel(1)
-      .build()
-
-    const sensorPPGBlue = new SensorBuilder()
-      .withIntValues([1, 2, 3])
-      .withPhotoplethysmographColor(Color.BLUE)
-      .build()
-
-    const sensorPPG700 = new SensorBuilder()
-      .withDoubleValues([1.0, 2.0, 3.0])
-      .withPhotoplethysmographWavelength(700)
-      .build()
-
-    const sensorACC = new SensorBuilder()
-      .withIntValues([1, 2, 3])
-      .withAccelerometerType(AccelerometerType.Z_COORDINATE)
-      .build()
-
-    const data = new DataBuilder()
-      .withMetadata(metadata)
-      .withSensor(sensorECG)
-      .withSensor(sensorPPGBlue)
-      .withSensor(sensorPPG700)
-      .withSensor(sensorACC)
-      .withTimestamps(timestamps)
-      .build()
+    const data = buildNormalData()
 
     const dataPbWrite = DataCompressor.compress(data)
 
@@ -270,44 +234,7 @@ describe("PcoreFileTest", () => {
   test("JsonNormalDataTest", () => {
     const path = nodePath.join(directory, "normalTest.pcore.json")
 
-    const metadata = new MetadataBuilder()
-      .withTimezoneOffset(400)
-      .withDeviceFirmwareVersion(3, 2, 1)
-      .withDeviceManufacturer("ABC")
-      .withDeviceName("xyz")
-      .withDeviceId("123")
-      .build()
-
-    const timestamps = [10, 20, 30]
-
-    const sensorECG = new SensorBuilder()
-      .withIntValues([1, 2, 3])
-      .withElectrocardiogramChannel(1)
-      .build()
-
-    const sensorPPGBlue = new SensorBuilder()
-      .withIntValues([1, 2, 3])
-      .withPhotoplethysmographColor(Color.BLUE)
-      .build()
-
-    const sensorPPG700 = new SensorBuilder()
-      .withDoubleValues([1.0, 2.0, 3.0])
-      .withPhotoplethysmographWavelength(700)
-      .build()
-
-    const sensorACC = new SensorBuilder()
-      .withIntValues([1, 2, 3])
-      .withAccelerometerType(AccelerometerType.Z_COORDINATE)
-      .build()
-
-    const data = new DataBuilder()
-      .withMetadata(metadata)
-      .withSensor(sensorECG)
-      .withSensor(sensorPPGBlue)
-      .withSensor(sensorPPG700)
-      .withSensor(sensorACC)
-      .withTimestamps(timestamps)
-      .build()
+    const data = buildNormalData()
 
     const dataPbWrite = DataCompressor.compress(data)
     const dataJsonWrite = Converter.convertToJson(dataPbWrite, DataForm.Compressed)

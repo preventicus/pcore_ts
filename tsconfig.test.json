@@ -13,7 +13,8 @@
     "paths": {
       "@/*": ["src/*"],
       "@generated/*": ["src/generated/pcore/*"],
-      "@tools/*": ["src/tools/*"]
+      "@tools/*": ["src/tools/*"],
+      "@tests/*": ["tests/*"]
     }
   },
   "include": ["src/**/*.ts", "tests/**/*.ts"],

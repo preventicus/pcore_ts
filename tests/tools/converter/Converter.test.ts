@@ -31,52 +31,13 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 */
 
-import {
-  AccelerometerType,
-  Color
-} from "@/ProtobufDefinitions"
-import { Converter, DataBuilder, DataCompressor, DataForm, DataPb, InvalidDataException, MetadataBuilder, SensorBuilder, WrongValueException } from "@/index"
+import { Color } from "@/ProtobufDefinitions"
+import { Converter, DataBuilder, DataCompressor, DataForm, DataPb, InvalidDataException, SensorBuilder, WrongValueException } from "@/index"
+import { buildNormalData } from "@tests/helpers/normalData"
 
 describe("ConverterTest", () => {
   test("NormalDataTest", () => {
-    const metadata = new MetadataBuilder()
-      .withTimezoneOffset(400)
-      .withDeviceFirmwareVersion(3, 2, 1)
-      .withDeviceManufacturer("ABC")
-      .withDeviceName("xyz")
-      .withDeviceId("123")
-      .build()
-
-    const timestamps = [10, 20, 30]
-
-    const sensorECG = new SensorBuilder()
-      .withIntValues([1, 2, 3])
-      .withElectrocardiogramChannel(1)
-      .build()
-
-    const sensorPPGBlue = new SensorBuilder()
-      .withIntValues([1, 2, 3])
-      .withPhotoplethysmographColor(Color.BLUE, 1)
-      .build()
-
-    const sensorPPG700 = new SensorBuilder()
-      .withDoubleValues([1.0, 2.0, 3.0])
-      .withPhotoplethysmographWavelength(700)
-      .build()
-
-    const sensorACC = new SensorBuilder()
-      .withIntValues([1, 2, 3])
-      .withAccelerometerType(AccelerometerType.Z_COORDINATE, 2)
-      .build()
-
-    const data = new DataBuilder()
-      .withMetadata(metadata)
-      .withSensor(sensorECG)
-      .withSensor(sensorPPGBlue)
-      .withSensor(sensorPPG700)
-      .withSensor(sensorACC)
-      .withTimestamps(timestamps)
-      .build()
+    const data = buildNormalData()
 
     const dataPb = DataCompressor.compress(data)
 

@@ -9,7 +9,8 @@ module.exports = {
     moduleNameMapper: {
         "^@/(.*)$": "<rootDir>/src/$1",
         "^@generated/(.*)$": "<rootDir>/src/generated/pcore/$1",
-        "^@tools/(.*)$": "<rootDir>/src/tools/$1"
+        "^@tools/(.*)$": "<rootDir>/src/tools/$1",
+        "^@tests/(.*)$": "<rootDir>/tests/$1"
     },
     testMatch: [
         "<rootDir>/tests/**/*.test.ts",
@@ -21,6 +22,7 @@ module.exports = {
         "<rootDir>/src/Exception",
         "<rootDir>/src/ProtobufDefinitions",
         "<rootDir>/src/tools/converter/DataForm",
-        "<rootDir>/dist/"
+        "<rootDir>/dist/",
+        "<rootDir>/tests/"
     ]
 }
