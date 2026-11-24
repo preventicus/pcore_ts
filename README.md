@@ -76,6 +76,48 @@ const dataPb = Converter.convertFromJson(json)
 PcoreFile.writePcoreBinary(dataPb, "output.pcore")
 ```
 
+### JSON forms
+
+`Converter.convertToJson` writes one of two forms, and `Converter.convertFromJson` reads both.
+
+**`DataForm.Compressed`** is the compressed data in the [protobuf JSON format](https://protobuf.dev/programming-guides/json/).
+Every protobuf implementation can read and write it with the Pcore proto file, e.g. `json_format.Parse` in Python.
+A sensor holds its values container and its sensor type directly, enum values are written by name,
+64-bit integers as strings, and fields with their default value (e.g. `"channel": 0`) are omitted:
+
+```json
+{
+  "metadata": { "pcoreVersion": { "major": 2, "minor": 1 } },
+  "compressedTimestampsContainer": {
+    "firstUnixTimestampMs": "1000",
+    "outerSectionsDurationsMs": [0],
+    "innerSectionsDurationsMs": [10],
+    "sectionsSizes": [2]
+  },
+  "sensors": [
+    { "intValuesContainer": { "values": ["5", "2"] }, "electrocardiogram": { "channel": 1 } },
+    { "doubleValuesContainer": { "values": [0.5, 0.7] }, "photoplethysmograph": { "color": "COLOR_GREEN" } }
+  ]
+}
+```
+
+When reading, the alternatives that protobuf JSON allows are accepted as well: numbers instead of strings for 64-bit integers,
+numbers instead of names for enum values, and the field names of the proto file (`compressed_timestamps_container`).
+
+**`DataForm.Decompressed`** is a human-readable form of this library with the decompressed timestamps and values.
+It is not a protobuf JSON format:
+
+```json
+{
+  "metadata": { "timezoneOffsetMin": 0, "pcoreVersion": { "major": 2, "minor": 1, "patch": 0 } },
+  "timestamps": [1000, 1010],
+  "sensors": [
+    { "valuesType": "intValuesContainer", "values": [5, 7], "electrocardiogram": { "channel": 1 } },
+    { "valuesType": "doubleValuesContainer", "values": [0.5, 0.7], "photoplethysmograph": { "color": "GREEN", "channel": 0 } }
+  ]
+}
+```
+
 For more examples see the `src/example` folder.
 
 ---

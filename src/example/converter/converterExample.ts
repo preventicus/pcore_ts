@@ -51,11 +51,12 @@ function main() {
   const dataPbConvertedFromDecompressedJson = Converter.convertFromJson(decompressedJson)
   const dataPbConvertedFromCompressedJson = Converter.convertFromJson(compressedJson)
 
+  // both forms lead to the same data, shown here in the compressed form (the protobuf JSON format)
   /* eslint-disable no-console */
   console.log("\n")
-  console.log(JSON.stringify(dataPbConvertedFromDecompressedJson))
+  console.log(Converter.convertToJson(dataPbConvertedFromDecompressedJson, DataForm.Compressed))
   console.log("\n")
-  console.log(JSON.stringify(dataPbConvertedFromCompressedJson))
+  console.log(Converter.convertToJson(dataPbConvertedFromCompressedJson, DataForm.Compressed))
   /* eslint-enable no-console */
 }
 

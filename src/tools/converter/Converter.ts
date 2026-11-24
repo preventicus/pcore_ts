@@ -95,8 +95,9 @@ export class Converter {
   /**
    * Converts a protobuf data object to a JSON string representation.
    *
-   * Depending on the data form, this either returns the raw protobuf object
-   * as JSON (compressed), or a human-readable decompressed format.
+   * Depending on the data form, this either returns the compressed data in the protobuf JSON format,
+   * which every protobuf implementation can read with the Pcore proto file, or a human-readable
+   * decompressed format of this library.
    *
    * @param dataPb - The protobuf data object to be converted.
    * @param dataForm - The form of the JSON to write (compressed or decompressed).
@@ -110,7 +111,7 @@ export class Converter {
     switch (dataForm) {
       case DataForm.Compressed: {
         Inspector.validateCompressed(dataPb)
-        return JSON.stringify(dataPb, null, indent)
+        return DataPb.toJsonString(dataPb, { prettySpaces: indent })
       }
       case DataForm.Decompressed: {
         const data = DataDecompressor.decompress(dataPb) // validation is done in decompress method
@@ -126,7 +127,8 @@ export class Converter {
 
   /**
    * Converts a JSON string back into a DataPb object.
-   * Accepts both compressed and decompressed JSON structures.
+   * Accepts compressed JSON (the protobuf JSON format, also when written by another protobuf
+   * implementation) and the decompressed JSON of this library.
    *
    * @param json - The JSON string to convert.
    * @returns A DataPb object reconstructed from the JSON.
@@ -136,7 +138,7 @@ export class Converter {
    */
   static convertFromJson(json: string): DataPb {
     const parsedJson = JsonStructure.parseObject(json)
-    if ("compressedTimestampsContainer" in parsedJson) {
+    if (JsonStructure.isCompressed(parsedJson)) {
       const dataPb = JsonStructure.parseCompressed(parsedJson)
       Inspector.validateCompressed(dataPb)
       return dataPb

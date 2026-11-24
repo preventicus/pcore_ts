@@ -32,15 +32,15 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 */
 
 import { DataPb, Metadata } from "@/ProtobufDefinitions"
-import { InvalidDataException } from "@/Exception"
+import { InvalidDataException, WrongValueException } from "@/Exception"
 import { JsonValue } from "@protobuf-ts/runtime"
 
 /**
- * Checks that JSON read by `Converter.convertFromJson` has the shape of the compressed or
- * decompressed Pcore JSON form, before it is used as typed data.
+ * Reads the two JSON forms of `Converter.convertFromJson` into typed data: the compressed form, which is
+ * the protobuf JSON format of the Pcore message, and the decompressed form of this library.
  *
- * This is part of reading the JSON forms of this library, not of the Pcore validation rules,
- * which are checked by `Inspector` on the typed data afterwards.
+ * This is part of reading JSON, not of the Pcore validation rules, which are checked by `Inspector`
+ * on the typed data afterwards.
  */
 export class JsonStructure {
   /**
@@ -75,7 +75,7 @@ export class JsonStructure {
   }
 
   /**
-   * Reads the metadata of compressed or decompressed JSON, which is written the same way in both forms.
+   * Reads the metadata of decompressed JSON, whose structure is that of the protobuf JSON format.
    * Missing fields get their default value, e.g. a missing timezone offset becomes 0, and unknown keys are ignored.
    * @param metadata - The value of the `metadata` key.
    * @returns The metadata, or `undefined` if the JSON holds no metadata.
@@ -96,59 +96,33 @@ export class JsonStructure {
   }
 
   /**
-   * Converts compressed JSON into a `DataPb` object. Missing fields get their default value,
-   * e.g. a `channel` missing in JSON written before the field existed becomes 0, and unknown keys are dropped.
-   * @param json - The parsed compressed JSON.
-   * @returns The typed data, which still has to be validated by `Inspector.validateCompressed`.
-   * @throws {InvalidDataException} If the structure does not match or a field has the wrong type.
+   * Tells whether parsed JSON is the compressed form. It is recognized by the timestamps container,
+   * under its JSON name or under its name in the proto file, since protobuf JSON allows both.
    */
-  static parseCompressed(json: Record<string, unknown>): DataPb {
-    JsonStructure.checkCompressed(json)
-    const dataPb = DataPb.create({ ...json, metadata: JsonStructure.parseMetadata(json.metadata) } as unknown as DataPb)
-    // the depth is also the number of checked array elements, so the default of 16 would skip the rest of the arrays
-    if (!DataPb.is(dataPb, Number.MAX_SAFE_INTEGER)) {
-      throw new InvalidDataException("JsonStructure.parseCompressed", "a field of the compressed data has the wrong type")
-    }
-    return dataPb
+  static isCompressed(json: Record<string, unknown>): boolean {
+    return "compressedTimestampsContainer" in json || "compressed_timestamps_container" in json
   }
 
   /**
-   * Checks that compressed JSON has the containers of a `DataPb` object, so that neither the conversion in
-   * `parseCompressed` nor the validation in `Inspector` fails with a TypeError on malformed input.
-   * @throws {InvalidDataException} If the structure does not match.
+   * Converts compressed JSON, i.e. the protobuf JSON format of the Pcore message, into a `DataPb` object.
+   * As defined for protobuf JSON, missing fields get their default value, 64-bit integers may be numbers
+   * or strings, enum values names or numbers, and field names may be those of the proto file.
+   * Unknown keys are ignored.
+   * @param json - The parsed compressed JSON.
+   * @returns The typed data, which still has to be validated by `Inspector.validateCompressed`.
+   * @throws {InvalidDataException} If the JSON does not have the structure of the Pcore message or a field has the wrong type.
+   * @throws {WrongValueException} If a 64-bit integer is not a safe JavaScript integer.
    */
-  private static checkCompressed(json: Record<string, unknown>) {
-    const functionName = "JsonStructure.checkCompressed"
-    const container = json.compressedTimestampsContainer
-    if (!JsonStructure.isObject(container) ||
-      typeof container.firstUnixTimestampMs !== "number" ||
-      !JsonStructure.isNumberArray(container.sectionsSizes) ||
-      !JsonStructure.isNumberArray(container.innerSectionsDurationsMs) ||
-      !JsonStructure.isNumberArray(container.outerSectionsDurationsMs)) {
-      throw new InvalidDataException(functionName, "compressedTimestampsContainer must hold firstUnixTimestampMs and three arrays of numbers")
+  static parseCompressed(json: Record<string, unknown>): DataPb {
+    try {
+      return DataPb.fromJson(json as JsonValue, { ignoreUnknownFields: true })
+    } catch (error) {
+      // 64-bit integers are read as `number`, protobuf-ts ends its message like this for values outside of ±(2^53 - 1)
+      if (error instanceof Error && error.message.endsWith("cannot convert to safe number")) {
+        throw new WrongValueException("JsonStructure.parseCompressed", "64-bit integers must be safe integers")
+      }
+      throw new InvalidDataException("JsonStructure.parseCompressed", `json is not compressed Pcore data in the protobuf JSON format (${String(error)})`)
     }
-    if (!Array.isArray(json.sensors)) {
-      throw new InvalidDataException(functionName, "sensors must be an array")
-    }
-    json.sensors.forEach(sensor => {
-      if (!JsonStructure.isObject(sensor) || !JsonStructure.isObject(sensor.values) || !JsonStructure.isObject(sensor.type)) {
-        throw new InvalidDataException(functionName, "every sensor must hold the objects values and type")
-      }
-      const valuesKind = sensor.values.oneofKind
-      if (valuesKind === "intValuesContainer" || valuesKind === "doubleValuesContainer") {
-        const valuesContainer = sensor.values[valuesKind]
-        if (!JsonStructure.isObject(valuesContainer) || !JsonStructure.isNumberArray(valuesContainer.values)) {
-          throw new InvalidDataException(functionName, `${valuesKind} must hold an array of numbers`)
-        }
-      }
-      const typeKind = sensor.type.oneofKind
-      if (typeKind === "photoplethysmograph" || typeKind === "accelerometer" || typeKind === "electrocardiogram") {
-        const typeMessage = sensor.type[typeKind]
-        if (!JsonStructure.isObject(typeMessage) || (typeKind === "photoplethysmograph" && !JsonStructure.isObject(typeMessage.light))) {
-          throw new InvalidDataException(functionName, `${typeKind} is malformed`)
-        }
-      }
-    })
   }
 
   /**

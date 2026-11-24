@@ -64,6 +64,10 @@ describe("ConverterTest", () => {
     return DataCompressor.compress(new DataBuilder().withSensor(sensor).withTimestamps([10, 20, 30]).build())
   }
 
+  function compressedEcgJson(): string {
+    return Converter.convertToJson(compressedEcgData(), DataForm.Compressed)
+  }
+
   function compressedPpgData(): DataPb {
     const sensor = new SensorBuilder()
       .withIntValues([1, 2, 3])
@@ -71,6 +75,59 @@ describe("ConverterTest", () => {
       .build()
     return DataCompressor.compress(new DataBuilder().withSensor(sensor).withTimestamps([10, 20, 30]).build())
   }
+
+  test("CompressedJsonIsProtobufJsonTest", () => {
+    // the compressed form is the protobuf JSON format, so every protobuf implementation can read it with the Pcore proto file
+    const dataPb = DataCompressor.compress(buildNormalData())
+
+    const json = Converter.convertToJson(dataPb, DataForm.Compressed)
+
+    // read back by the standard JSON reader of the protobuf library instead of the Converter
+    expect(DataPb.fromJsonString(json)).toEqual(dataPb)
+    const parsedJson = JSON.parse(json)
+    // no key of the in-memory representation of protobuf-ts
+    expect(json).not.toContain("oneofKind")
+    // a sensor holds its values container and its sensor type directly
+    expect(parsedJson.sensors[1]).toEqual({ intValuesContainer: { values: ["1", "1", "1"] }, photoplethysmograph: { color: "COLOR_BLUE", channel: 1 } })
+    expect(parsedJson.sensors[3].accelerometer).toEqual({ type: "TYPE_Z_COORDINATE", channel: 2 })
+    // 64-bit integers are strings, fields with their default value (channel 0) are omitted
+    expect(parsedJson.compressedTimestampsContainer.firstUnixTimestampMs).toBe("10")
+    expect(parsedJson.sensors[2].photoplethysmograph).toEqual({ wavelengthNm: 700 })
+  })
+
+  test("CompressedJsonIndentTest", () => {
+    const dataPb = compressedEcgData()
+    const minifiedJson = Converter.convertToJson(dataPb, DataForm.Compressed)
+    const indentedJson = Converter.convertToJson(dataPb, DataForm.Compressed, 2)
+
+    expect(minifiedJson).not.toContain("\n")
+    expect(indentedJson).toContain("\n  \"sensors\": [")
+    expect(Converter.convertFromJson(indentedJson)).toEqual(dataPb)
+  })
+
+  test("ConvertFromCompressedJsonOfOtherImplementationTest", () => {
+    // protobuf JSON written by another implementation may use the field names of the proto file,
+    // numbers for 64-bit integers and numbers for enum values
+    const json = JSON.stringify({
+      metadata: { timezone_offset_min: 60, pcore_version: { major: 2, minor: 1 } },
+      compressed_timestamps_container: { first_unix_timestamp_ms: 10, outer_sections_durations_ms: [0], inner_sections_durations_ms: [10], sections_sizes: [3] },
+      sensors: [{ int_values_container: { values: [1, 1, 1] }, photoplethysmograph: { color: 3, channel: 4 } }]
+    })
+
+    const dataPb = Converter.convertFromJson(json)
+
+    expect(dataPb.metadata!.timezoneOffsetMin).toBe(60)
+    expect(dataPb.compressedTimestampsContainer).toEqual({ firstUnixTimestampMs: 10, outerSectionsDurationsMs: [0], innerSectionsDurationsMs: [10], sectionsSizes: [3] })
+    expect(dataPb.sensors[0].values).toEqual({ oneofKind: "intValuesContainer", intValuesContainer: { values: [1, 1, 1] } })
+    expect(dataPb.sensors[0].type).toEqual({ oneofKind: "photoplethysmograph", photoplethysmograph: { light: { oneofKind: "color", color: Color.BLUE }, channel: 4 } })
+  })
+
+  test("ConvertFromFormerCompressedJsonTest", () => {
+    // before the protobuf JSON format, the compressed form was the in-memory object of protobuf-ts; it is not read anymore
+    const formerJson = JSON.stringify(compressedEcgData())
+    expect(formerJson).toContain("oneofKind")
+    expect(() => Converter.convertFromJson(formerJson)).toThrow(InvalidDataException)
+  })
 
   test("ConvertToJsonDecompressedWithoutSensorTypeTest", () => {
     // sensor types are not checked when decompressing, so that legacy files can be read
@@ -120,8 +177,9 @@ describe("ConverterTest", () => {
   })
 
   test("ConvertFromJsonErrorInSensorValuesTest", () => {
-    let dataJson = JSON.stringify(compressedEcgData())
-    dataJson = dataJson.replace("intValue", "itValue")
+    // the unknown key is ignored, which leaves a sensor without values
+    const dataJson = compressedEcgJson().replace("intValuesContainer", "itValuesContainer")
+    expect(dataJson).toContain("itValuesContainer")
     expect(() => Converter.convertFromJson(dataJson)).toThrow(InvalidDataException)
   })
 
@@ -168,17 +226,19 @@ describe("ConverterTest", () => {
 
   test("ConvertFromCompressedJsonMalformedSensorTest", () => {
     const dataPb = compressedEcgData()
-    const json = JSON.stringify(dataPb)
-    const withoutSensors = JSON.stringify({ ...dataPb, sensors: 5 })
+    const json = compressedEcgJson()
+    const parsedJson = JSON.parse(json)
+    const sensorsNoArray = JSON.stringify({ ...parsedJson, sensors: 5 })
     const withoutValuesContainer = json.replace("\"intValuesContainer\":{", "\"otherContainer\":{")
-    const withoutTypeMessage = json.replace("\"electrocardiogram\":{", "\"other\":{")
-    const metadataNoObject = JSON.stringify({ ...dataPb, metadata: 5 })
-    const sensorNoObject = JSON.stringify({ ...dataPb, sensors: [5] })
+    const typeMessageNoObject = json.replace("\"electrocardiogram\":{\"channel\":1}", "\"electrocardiogram\":5")
+    const metadataNoObject = JSON.stringify({ ...parsedJson, metadata: 5 })
+    const sensorNoObject = JSON.stringify({ ...parsedJson, sensors: [5] })
+    expect(typeMessageNoObject).toContain("\"electrocardiogram\":5")
 
     expect(Converter.convertFromJson(json)).toEqual(dataPb)
-    expect(() => Converter.convertFromJson(withoutSensors)).toThrow(InvalidDataException)
+    expect(() => Converter.convertFromJson(sensorsNoArray)).toThrow(InvalidDataException)
     expect(() => Converter.convertFromJson(withoutValuesContainer)).toThrow(InvalidDataException)
-    expect(() => Converter.convertFromJson(withoutTypeMessage)).toThrow(InvalidDataException)
+    expect(() => Converter.convertFromJson(typeMessageNoObject)).toThrow(InvalidDataException)
     expect(() => Converter.convertFromJson(metadataNoObject)).toThrow(InvalidDataException)
     expect(() => Converter.convertFromJson(sensorNoObject)).toThrow(InvalidDataException)
   })
@@ -216,9 +276,8 @@ describe("ConverterTest", () => {
   })
 
   test("ConvertFromCompressedJsonWithoutChannelTest", () => {
-    // compressed JSON written before the channel fields existed
-    const dataPbWrite = compressedEcgData()
-    const json = JSON.stringify(dataPbWrite).replace("\"electrocardiogram\":{\"channel\":1}", "\"electrocardiogram\":{}")
+    // a missing field has its default value in protobuf JSON, which also covers JSON written before the channel fields existed
+    const json = compressedEcgJson().replace("\"electrocardiogram\":{\"channel\":1}", "\"electrocardiogram\":{}")
     expect(json).toContain("\"electrocardiogram\":{}")
 
     const dataPb = Converter.convertFromJson(json)
@@ -231,7 +290,7 @@ describe("ConverterTest", () => {
     // missing metadata fields get their default value, so the data can be written as binary afterwards
     const sensor = { valuesType: "intValuesContainer", values: [1, 2, 3], electrocardiogram: { channel: 1 } }
     const decompressedJson = JSON.stringify({ metadata: {}, timestamps: [10, 20, 30], sensors: [sensor] })
-    const compressedJson = JSON.stringify({ ...compressedEcgData(), metadata: {} })
+    const compressedJson = JSON.stringify({ ...JSON.parse(compressedEcgJson()), metadata: {} })
 
     for (const json of [decompressedJson, compressedJson]) {
       const dataPb = Converter.convertFromJson(json)
@@ -254,30 +313,32 @@ describe("ConverterTest", () => {
     const sensor = { valuesType: "intValuesContainer", values: [1, 2, 3], electrocardiogram: { channel: 1 } }
     malformedMetadata.forEach(metadata => {
       const decompressedJson = JSON.stringify({ metadata, timestamps: [10, 20, 30], sensors: [sensor] })
-      const compressedJson = JSON.stringify({ ...compressedEcgData(), metadata })
+      const compressedJson = JSON.stringify({ ...JSON.parse(compressedEcgJson()), metadata })
       expect(() => Converter.convertFromJson(decompressedJson)).toThrow(InvalidDataException)
       expect(() => Converter.convertFromJson(compressedJson)).toThrow(InvalidDataException)
     })
   })
 
   test("ConvertFromCompressedJsonWrongFieldTypeTest", () => {
-    const dataPb = compressedEcgData()
-    const json = JSON.stringify(dataPb)
+    const json = compressedEcgJson()
+    const parsedJson = JSON.parse(json)
     const channelNoNumber = json.replace("\"channel\":1", "\"channel\":\"x\"")
-    const twoSensorTypes = json.replace("\"electrocardiogram\":{", "\"accelerometer\":{\"type\":1,\"channel\":0},\"electrocardiogram\":{")
-    const unknownSensorType = json.replace("\"oneofKind\":\"electrocardiogram\"", "\"oneofKind\":\"thermometer\"")
-    // the wrong type sits behind the first 16 sensors
-    const sensors = Array.from({ length: 20 }, () => structuredClone(dataPb.sensors[0]))
-    const manySensors = JSON.stringify({ ...dataPb, sensors })
-    const lastSensorWrong = JSON.stringify({
-      ...dataPb,
-      sensors: [...sensors.slice(0, 19), { ...sensors[19], type: { oneofKind: "electrocardiogram", electrocardiogram: { channel: "x" } } }]
-    })
+    const channelNegative = json.replace("\"channel\":1", "\"channel\":-1")
+    const twoSensorTypes = json.replace("\"electrocardiogram\":{", "\"accelerometer\":{\"type\":\"TYPE_X_COORDINATE\"},\"electrocardiogram\":{")
+    const intValueNoInteger = json.replace("[\"1\",\"1\",\"1\"]", "[1.5,1,1]")
+    // every sensor is checked, also the last of many
+    const sensors = Array.from({ length: 20 }, () => parsedJson.sensors[0])
+    const manySensors = JSON.stringify({ ...parsedJson, sensors })
+    const lastSensorWrong = JSON.stringify({ ...parsedJson, sensors: [...sensors.slice(0, 19), { ...sensors[19], electrocardiogram: { channel: "x" } }] })
+    for (const changedJson of [channelNoNumber, channelNegative, twoSensorTypes, intValueNoInteger]) {
+      expect(changedJson).not.toBe(json)
+    }
 
     expect(Converter.convertFromJson(manySensors).sensors.length).toBe(20)
     expect(() => Converter.convertFromJson(channelNoNumber)).toThrow(InvalidDataException)
+    expect(() => Converter.convertFromJson(channelNegative)).toThrow(InvalidDataException)
     expect(() => Converter.convertFromJson(twoSensorTypes)).toThrow(InvalidDataException)
-    expect(() => Converter.convertFromJson(unknownSensorType)).toThrow(InvalidDataException)
+    expect(() => Converter.convertFromJson(intValueNoInteger)).toThrow(InvalidDataException)
     expect(() => Converter.convertFromJson(lastSensorWrong)).toThrow(InvalidDataException)
   })
 
@@ -300,7 +361,8 @@ describe("ConverterTest", () => {
     const decompressedJson = "{\"timestamps\": [10, 20], \"sensors\": [{\"valuesType\": \"intValuesContainer\", \"values\": [9223372036854775807, 0], \"electrocardiogram\": {\"channel\": 1}}]}"
     expect(() => Converter.convertFromJson(decompressedJson)).toThrow(WrongValueException)
 
-    const compressedJson = JSON.stringify(compressedEcgData()).replace("[1,1,1]", "[9223372036854775807,1,1]")
+    // protobuf JSON writes 64-bit integers as strings
+    const compressedJson = compressedEcgJson().replace("[\"1\",\"1\",\"1\"]", "[\"9223372036854775807\",\"1\",\"1\"]")
     expect(compressedJson).toContain("9223372036854775807")
     expect(() => Converter.convertFromJson(compressedJson)).toThrow(WrongValueException)
   })
