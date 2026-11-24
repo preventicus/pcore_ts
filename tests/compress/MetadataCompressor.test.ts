@@ -59,4 +59,23 @@ describe("MetadataCompressorTest", () => {
     expect(compressed.device?.firmwareVersion?.minor).toBe(4)
     expect(compressed.device?.firmwareVersion?.patch).toBe(1)
   })
+
+  test("OverwritesOutdatedPcoreVersionTest", () => {
+    // the MetadataBuilder already sets the current version, so only an input with another version shows that the compressor sets it
+    const metadata = new MetadataBuilder().withTimezoneOffset(60).build()
+    metadata.pcoreVersion = { major: 1, minor: 0, patch: 0 }
+
+    const compressed = MetadataCompressor.compress(metadata)
+
+    expect(compressed.pcoreVersion).toEqual({ major: PcoreVersion.major, minor: PcoreVersion.minor, patch: PcoreVersion.patch })
+    expect(compressed.timezoneOffsetMin).toBe(60)
+    // the input is not changed
+    expect(metadata.pcoreVersion).toEqual({ major: 1, minor: 0, patch: 0 })
+  })
+
+  test("SetsPcoreVersionWithoutVersionTest", () => {
+    const compressed = MetadataCompressor.compress({ timezoneOffsetMin: 0 })
+
+    expect(compressed.pcoreVersion).toEqual({ major: PcoreVersion.major, minor: PcoreVersion.minor, patch: PcoreVersion.patch })
+  })
 })
