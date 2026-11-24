@@ -49,6 +49,8 @@ the sensor types: channel, wavelength, accelerometer type, timezone offset and v
 
 ## Installation
 
+Node.js 18 or newer is required (the library uses `structuredClone`).
+
 To install start the `generate:proto` script.
 
 ---

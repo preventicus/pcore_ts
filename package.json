@@ -10,6 +10,9 @@
     "dist",
     "!dist/example"
   ],
+  "engines": {
+    "node": ">=18"
+  },
   "scripts": {
     "generate:proto": "./scripts/INSTALL_PROTOBUF.sh",
     "clean": "node -e \"require('fs').rmSync('dist', { recursive: true, force: true })\"",
