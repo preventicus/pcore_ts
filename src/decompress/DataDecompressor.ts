@@ -60,7 +60,8 @@ export class DataDecompressor {
       metadata = structuredClone(dataPb.metadata)
     }
 
-    const timestamps = TimestampsDecompressor.decompress(dataPb.compressedTimestampsContainer)
+    // rule 1 of the validation above guarantees that the timestamps container is present
+    const timestamps = TimestampsDecompressor.decompress(dataPb.compressedTimestampsContainer!)
 
     const sensors: Sensor[] = []
 

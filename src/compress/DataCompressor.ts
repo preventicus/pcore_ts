@@ -64,9 +64,7 @@ export class DataCompressor {
 
     dataPb.metadata = MetadataCompressor.compress(data.metadata)
 
-    if (data.timestamps.length !== 0) {
-      dataPb.compressedTimestampsContainer = TimestampsCompressor.compress(data.timestamps)
-    }
+    dataPb.compressedTimestampsContainer = TimestampsCompressor.compress(data.timestamps)
 
     data.sensors.forEach(sensor => {
       dataPb.sensors.push(SensorCompressor.compress(sensor))

@@ -42,17 +42,12 @@ export class TimestampsDecompressor {
   /**
    * Decompresses a `CompressedTimestampsContainer` into an array of Unix timestamps in milliseconds.
    *
-   * - Reconstructs timestamps by iteratively adding section-level and intra-section durations.
-   * - Returns an empty array if the input container is `undefined`.
+   * Reconstructs timestamps by iteratively adding section-level and intra-section durations.
    *
    * @param compressedTimestampsContainer - The compressed representation of timestamps.
    * @returns The full array of decompressed Unix timestamps.
    */
-  static decompress(compressedTimestampsContainer?: CompressedTimestampsContainer): UnixTimestamps {
-    if (compressedTimestampsContainer === undefined) {
-      return []
-    }
-
+  static decompress(compressedTimestampsContainer: CompressedTimestampsContainer): UnixTimestamps {
     let currentUnixTimestampInMs = compressedTimestampsContainer.firstUnixTimestampMs
     const outerSectionsDurationsInMs = compressedTimestampsContainer.outerSectionsDurationsMs
     const innerSectionsDurationsInMs = compressedTimestampsContainer.innerSectionsDurationsMs

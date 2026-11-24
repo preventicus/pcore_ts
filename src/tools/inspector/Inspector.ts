@@ -145,7 +145,7 @@ export class Inspector {
    * @returns List of SensorType
    */
   static getSensorTypes(dataPb: DataPb): SensorType[] {
-    return (dataPb.sensors ?? []).map(sensor => sensor.type)
+    return dataPb.sensors.map(sensor => sensor.type)
   }
 
   /**
