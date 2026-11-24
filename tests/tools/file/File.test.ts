@@ -32,22 +32,34 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 */
 
 import * as fs from "fs"
+import * as os from "os"
+import * as nodePath from "path"
 import { AccelerometerType, Color, DataPb } from "@/ProtobufDefinitions"
 import { Converter, DataBuilder, DataCompressor, DataDecompressor, DataForm, File, InvalidDataException, MetadataBuilder, SensorBuilder, WrongValueException } from "@/index"
 import { PcoreVersion } from "@generated/pcoreVersion"
 
 describe("FileTest", () => {
+  // every run writes its files into a fresh directory, so no file of an earlier run can make a test pass
+  let directory: string
+
+  beforeAll(() => {
+    directory = fs.mkdtempSync(nodePath.join(os.tmpdir(), "pcore-file-test-"))
+  })
+
+  afterAll(() => {
+    fs.rmSync(directory, { recursive: true, force: true })
+  })
+
   test("PcoreEmptyDataTest", () => {
     // empty data is not valid since Pcore 2.1.0 and is not written
-    const path = __dirname + "/emptyTest.pcore"
-    fs.rmSync(path, { force: true })
+    const path = nodePath.join(directory, "emptyTest.pcore")
     expect(() => File.writePcoreBinary(DataPb.create(), path)).toThrow(InvalidDataException)
     expect(fs.existsSync(path)).toBe(false)
   })
 
   test("PcoreReadEmptyFileTest", () => {
     // an empty file is read without validation, decompressing it fails
-    const path = __dirname + "/emptyFileTest.pcore"
+    const path = nodePath.join(directory, "emptyFileTest.pcore")
     fs.writeFileSync(path, "")
 
     const dataPbRead = File.readPcoreBinary(path)
@@ -60,7 +72,7 @@ describe("FileTest", () => {
 
   test("PcoreMinimalDataTest", () => {
     // empty data cannot be compressed since Pcore 2.1.0, so the smallest valid data has one timestamp and one sensor
-    const path = __dirname + "/minimalTest.pcore"
+    const path = nodePath.join(directory, "minimalTest.pcore")
     const sensor = new SensorBuilder().withIntValues([7]).withElectrocardiogramChannel(1).build()
     const data = new DataBuilder().withTimestamps([1]).withSensor(sensor).build()
     const dataPbWrite = DataCompressor.compress(data)
@@ -78,7 +90,7 @@ describe("FileTest", () => {
 
   test("PcoreUnsafeIntegerTest", () => {
     // JavaScript-specific: 64-bit integers outside of the safe integer range cannot be read exactly
-    const path = __dirname + "/unsafeIntegerTest.pcore"
+    const path = nodePath.join(directory, "unsafeIntegerTest.pcore")
     const sensor = new SensorBuilder().withIntValues([7]).withElectrocardiogramChannel(1).build()
     const dataPbWrite = DataCompressor.compress(new DataBuilder().withTimestamps([1]).withSensor(sensor).build())
     if (dataPbWrite.sensors[0].values.oneofKind === "intValuesContainer") {
@@ -92,7 +104,7 @@ describe("FileTest", () => {
 
   test("PcoreTruncatedFileTest", () => {
     // no spec counterpart, the spec does not cover file handling: a file that ends too early, e.g. after an aborted download
-    const path = __dirname + "/truncatedFileTest.pcore"
+    const path = nodePath.join(directory, "truncatedFileTest.pcore")
     const sensor = new SensorBuilder().withIntValues([7, 8, 9]).withElectrocardiogramChannel(1).build()
     const dataPbWrite = DataCompressor.compress(new DataBuilder().withTimestamps([1, 2, 3]).withSensor(sensor).build())
     const raw = DataPb.toBinary(dataPbWrite)
@@ -104,7 +116,7 @@ describe("FileTest", () => {
 
   test("PcoreForeignFileTest", () => {
     // no spec counterpart, the spec does not cover file handling: a file of another format with the extension .pcore
-    const path = __dirname + "/foreignFileTest.pcore"
+    const path = nodePath.join(directory, "foreignFileTest.pcore")
     fs.writeFileSync(path, "this is not a Pcore file")
 
     expect(() => File.readPcoreBinary(path)).toThrow(InvalidDataException)
@@ -112,15 +124,14 @@ describe("FileTest", () => {
 
   test("PcoreMissingFileTest", () => {
     // no spec counterpart, the spec does not cover file handling: errors of the file system are passed on unchanged
-    const path = __dirname + "/missingFileTest.pcore"
-    fs.rmSync(path, { force: true })
+    const path = nodePath.join(directory, "missingFileTest.pcore")
 
     expect(() => File.readPcoreBinary(path)).toThrow(expect.objectContaining({ code: "ENOENT" }))
     expect(() => File.readPcoreBinary(path)).not.toThrow(InvalidDataException)
   })
 
   test("PcoreNormalDataTest", () => {
-    const path = __dirname + "/normalTest.pcore"
+    const path = nodePath.join(directory, "normalTest.pcore")
 
     const metadata = new MetadataBuilder()
       .withTimezoneOffset(400)
@@ -239,7 +250,7 @@ describe("FileTest", () => {
   })
 
   test("JsonMinimalDataTest", () => {
-    const path = __dirname + "/minimalTest.pcore.json"
+    const path = nodePath.join(directory, "minimalTest.pcore.json")
     const sensor = new SensorBuilder().withIntValues([7]).withElectrocardiogramChannel(1).build()
     const dataPbWrite = DataCompressor.compress(new DataBuilder().withTimestamps([1]).withSensor(sensor).build())
     const dataJsonWrite = Converter.convertToJson(dataPbWrite, DataForm.Compressed)
@@ -252,7 +263,7 @@ describe("FileTest", () => {
   })
 
   test("JsonNormalDataTest", () => {
-    const path = __dirname + "/normalTest.pcore.json"
+    const path = nodePath.join(directory, "normalTest.pcore.json")
 
     const metadata = new MetadataBuilder()
       .withTimezoneOffset(400)
