@@ -12,8 +12,7 @@
       "@/*": ["*"],
       "@generated/pcore": ["generated/pcore/pcore"],
       "@generated/pcoreVersion": ["generated/pcore/pcoreVersion"],
-      "@tools/*": ["tools/*"],
-      "@example/*": ["../example/*"]
+      "@tools/*": ["tools/*"]
     },
     "outDir": "dist",
     "rootDir": "src",
