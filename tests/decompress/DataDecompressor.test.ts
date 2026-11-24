@@ -178,6 +178,20 @@ describe("DataDecompressorTest", () => {
     expect(() => decompress({ first: Number.MAX_SAFE_INTEGER - 1, sizes: [2], inner: [1], outer: [0] }, [intSensor([1, 2])])).not.toThrow()
   })
 
+  test("NoUnsignedIntegerInTimestampsContainerTest", () => {
+    // JavaScript-specific: number also holds negative values and fractions, which protobuf excludes by the type uint32 / uint64.
+    // Without the check the first case would decompress to the timestamps [100, 95, 90, 92, 93].
+    const sensors = [intSensor([1, 1, 1, 1, 1])]
+    expect(() => decompress({ first: 100, sizes: [3, 2], inner: [-5, 1], outer: [0, -8] }, sensors)).toThrow(WrongValueException)
+    expect(() => decompress({ first: 100, sizes: [3, 2], inner: [1.5, 1], outer: [0, 8] }, sensors)).toThrow(WrongValueException)
+    expect(() => decompress({ first: 100, sizes: [3, 2], inner: [1, 1], outer: [0, 4294967296] }, sensors)).toThrow(WrongValueException)
+    expect(() => decompress({ first: 100, sizes: [2.5, 2.5], inner: [1, 1], outer: [0, 8] }, sensors)).toThrow(WrongValueException)
+    expect(() => decompress({ first: 100, sizes: [3, 2], inner: [NaN, 1], outer: [0, 8] }, sensors)).toThrow(WrongValueException)
+    expect(() => decompress({ first: -100, sizes: [3, 2], inner: [1, 1], outer: [0, 8] }, sensors)).toThrow(WrongValueException)
+    expect(() => decompress({ first: 100.5, sizes: [3, 2], inner: [1, 1], outer: [0, 8] }, sensors)).toThrow(WrongValueException)
+    expect(decompress({ first: 100, sizes: [3, 2], inner: [1, 1], outer: [0, 4294967295] }, sensors).timestamps).toEqual([100, 101, 102, 4294967395, 4294967396])
+  })
+
   test("NonFiniteDoubleValueTest", () => {
     // not covered by the spec test cases, because JSON cannot represent NaN and Infinity
     const timestamps = { first: 1, sizes: [3], inner: [1], outer: [0] }

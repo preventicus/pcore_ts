@@ -40,6 +40,10 @@ but are represented as JavaScript `number`. Therefore they must be safe integers
 and `Number.MAX_SAFE_INTEGER`, i.e. ±(2^53 − 1)); this also applies to the differences between consecutive integer values.
 Data that violates this is rejected with a `WrongValueException` when compressing, decompressing or reading a `.pcore` file.
 
+For the same reason the unsigned integers of the compressed timestamps (first unix timestamp, sections sizes, inner and outer
+section durations) are checked when decompressing: JavaScript `number` also holds negative values and fractions,
+which are rejected with a `WrongValueException`.
+
 ---
 
 ## Installation

@@ -255,7 +255,8 @@ export class Inspector {
    * in the order given there. Sensor types and the uniqueness of sensor identifications are
    * intentionally not checked, so that files written before the `channel` fields existed can be read.
    * In addition, every decompressed integer (timestamps and integer values) must be a safe
-   * JavaScript integer (`Number.isSafeInteger`), because this library stores 64-bit integers as `number`.
+   * JavaScript integer (`Number.isSafeInteger`), because this library stores 64-bit integers as `number`,
+   * and the values of the timestamps container must be unsigned integers as in protobuf.
    *
    * @param dataPb - The `DataPb` object to validate.
    * @throws {InvalidDataException} If the compressed structure is inconsistent.
@@ -277,6 +278,14 @@ export class Inspector {
     // Rule 2: the three vectors of the timestamps container have the same length
     if (outerSectionsDurations.length !== numberOfSections || innerSectionsDurations.length !== numberOfSections) {
       throw new InvalidDataException("Inspector.validateCompressed", "Vectors in compressed_timestamps_container must have the same length")
+    }
+
+    // JavaScript-specific: the values of the timestamps container are unsigned integers in protobuf, but number
+    // also holds negative values and fractions, e.g. when the data is read from JSON. Rules 4 to 7 rely on it.
+    const firstUnixTimestamp = compressedTimestampsContainer.firstUnixTimestampMs
+    if (!Number.isSafeInteger(firstUnixTimestamp) || firstUnixTimestamp < 0 ||
+      ![sectionsSizes, innerSectionsDurations, outerSectionsDurations].every(values => values.every(Inspector.isUint32))) {
+      throw new WrongValueException("Inspector.validateCompressed", "Values in compressed_timestamps_container must be unsigned integers")
     }
 
     // Rule 3: every sensor has as many values as the sum of sections_sizes
@@ -318,9 +327,9 @@ export class Inspector {
     }
 
     // JavaScript-specific: every decompressed unix timestamp is a safe integer.
-    // The timestamps are strictly increasing (rules 5 to 7), so checking the first and the last one is sufficient.
-    const firstUnixTimestamp = compressedTimestampsContainer.firstUnixTimestampMs
-    if (!Number.isSafeInteger(firstUnixTimestamp) || !Number.isSafeInteger(Inspector.getLastUnixTimestamp(dataPb))) {
+    // The timestamps are strictly increasing (rules 5 to 7) and the first one is a safe integer (see above),
+    // so checking the last one is sufficient.
+    if (!Number.isSafeInteger(Inspector.getLastUnixTimestamp(dataPb))) {
       throw new WrongValueException("Inspector.validateCompressed", "Decompressed unix timestamps must be safe integers")
     }
 
@@ -350,6 +359,14 @@ export class Inspector {
 
     // Rule 12: every sensor type that is set has allowed values
     dataPb.sensors.forEach(Inspector.checkSensorTypeValues)
+  }
+
+  /**
+   * Tells whether a number is a value of the protobuf type uint32. JavaScript-specific: the type `number`
+   * also holds negative values, fractions and NaN, which cannot be written as uint32.
+   */
+  private static isUint32(value: number | undefined): boolean {
+    return Number.isInteger(value) && value as number >= 0 && value as number <= UINT32_MAX
   }
 
   private static checkDoubleValuesFinite(sensor: Sensor) {
