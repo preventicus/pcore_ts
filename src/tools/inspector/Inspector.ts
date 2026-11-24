@@ -194,16 +194,11 @@ export class Inspector {
       }
     })
 
-    // Rule 5: every resulting inner and outer section duration fits into uint32
-    const sectionIdxs = TimestampsCompressor.findSectionIdxs(timestamps)
-    for (let k = 0; k < sectionIdxs.length; k++) {
-      const startIdx = sectionIdxs[k]
-      const endIdx = k + 1 < sectionIdxs.length ? sectionIdxs[k + 1] : numberOfUnixTimestamps
-      const outerSectionDuration = k === 0 ? 0 : timestamps[startIdx] - timestamps[sectionIdxs[k - 1]]
-      const innerSectionDuration = endIdx - startIdx > 1 ? timestamps[startIdx + 1] - timestamps[startIdx] : 0
-      if (outerSectionDuration > UINT32_MAX || innerSectionDuration > UINT32_MAX) {
-        throw new WrongValueException("Inspector.validateDecompressed", "Section durations must fit into uint32")
-      }
+    // Rule 5: every resulting inner and outer section duration fits into uint32.
+    // The durations are taken from the compressor, so that the formula of the spec exists only once.
+    const { innerSectionsDurationsMs, outerSectionsDurationsMs } = TimestampsCompressor.compress(timestamps)
+    if ([...innerSectionsDurationsMs, ...outerSectionsDurationsMs].some(sectionDuration => sectionDuration > UINT32_MAX)) {
+      throw new WrongValueException("Inspector.validateDecompressed", "Section durations must fit into uint32")
     }
 
     // Rule 6: every integer value difference (and the first value) fits into int64.
