@@ -90,6 +90,35 @@ describe("FileTest", () => {
     expect(() => File.readPcoreBinary(path)).toThrow(WrongValueException)
   })
 
+  test("PcoreTruncatedFileTest", () => {
+    // no spec counterpart, the spec does not cover file handling: a file that ends too early, e.g. after an aborted download
+    const path = __dirname + "/truncatedFileTest.pcore"
+    const sensor = new SensorBuilder().withIntValues([7, 8, 9]).withElectrocardiogramChannel(1).build()
+    const dataPbWrite = DataCompressor.compress(new DataBuilder().withTimestamps([1, 2, 3]).withSensor(sensor).build())
+    const raw = DataPb.toBinary(dataPbWrite)
+    fs.writeFileSync(path, raw.subarray(0, raw.length - 1))
+
+    expect(() => File.readPcoreBinary(path)).toThrow(InvalidDataException)
+    expect(() => File.readPcoreBinary(path)).toThrow("File.readPcoreBinary: The file cannot be decoded as Pcore data")
+  })
+
+  test("PcoreForeignFileTest", () => {
+    // no spec counterpart, the spec does not cover file handling: a file of another format with the extension .pcore
+    const path = __dirname + "/foreignFileTest.pcore"
+    fs.writeFileSync(path, "this is not a Pcore file")
+
+    expect(() => File.readPcoreBinary(path)).toThrow(InvalidDataException)
+  })
+
+  test("PcoreMissingFileTest", () => {
+    // no spec counterpart, the spec does not cover file handling: errors of the file system are passed on unchanged
+    const path = __dirname + "/missingFileTest.pcore"
+    fs.rmSync(path, { force: true })
+
+    expect(() => File.readPcoreBinary(path)).toThrow(expect.objectContaining({ code: "ENOENT" }))
+    expect(() => File.readPcoreBinary(path)).not.toThrow(InvalidDataException)
+  })
+
   test("PcoreNormalDataTest", () => {
     const path = __dirname + "/normalTest.pcore"
 

@@ -32,7 +32,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 */
 
 import { DataPb } from "../../ProtobufDefinitions"
-import { WrongValueException } from "@/Exception"
+import { InvalidDataException, WrongValueException } from "@/Exception"
 import { Inspector } from "@tools/inspector/Inspector"
 import * as fs from "node:fs"
 
@@ -55,9 +55,12 @@ export class File {
 
   /**
    * Reads a Pcore binary file from disk and deserializes it into a DataPb object.
+   * The content is only decoded, not validated - decompressing it validates it.
+   * Errors of the file system, e.g. a missing file, are passed on unchanged.
    * @param path The path to the binary file
    * @returns The deserialized DataPb object
    * @throws {WrongValueException} If a 64-bit integer in the file is not a safe JavaScript integer
+   * @throws {InvalidDataException} If the content cannot be decoded, e.g. a truncated file or a file of another format
    */
   static readPcoreBinary(path: string) : DataPb {
     const raw = fs.readFileSync(path)
@@ -68,7 +71,8 @@ export class File {
       if (error instanceof Error && error.message === "cannot convert to safe number") {
         throw new WrongValueException("File.readPcoreBinary", "64-bit integers must be safe integers")
       }
-      throw error
+      // every other decoding error means that the file is truncated, damaged or not a Pcore file
+      throw new InvalidDataException("File.readPcoreBinary", `The file cannot be decoded as Pcore data (${String(error)})`)
     }
   }
 
