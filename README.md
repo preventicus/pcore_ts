@@ -65,7 +65,7 @@ const dataPb = PcoreFile.readPcoreBinary("rejected.pcore", { validate: false })
 
 ## Installation
 
-Node.js 18 or newer is required (the library uses `structuredClone`).
+Node.js 24 or newer is required.
 
 ### Using the library in another project
 
@@ -93,7 +93,7 @@ Only the compiled library (`dist/`) is part of the installed package, not the so
 ### Working on the library
 
 Clone this repository and install the dependencies with `npm install`; this also compiles the library into `dist/`.
-`npm test` runs the tests and `npm run lint` the linter, which needs Node.js 20.19 or newer.
+`npm test` runs the tests and `npm run lint` the linter.
 The same checks, together with the type check and a test build of the package, run on GitHub for every pull request
 and every push to `main` (`.github/workflows/checks.yml`).
 

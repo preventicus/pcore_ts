@@ -27,7 +27,7 @@ jobs:
       - name: Set up Node.js
         uses: actions/setup-node@v5
         with:
-          # the linter (ESLint 10) needs Node.js 20.19 or newer
+          # the minimum version of the library, see engines in package.json
           node-version: 24
           cache: npm
 

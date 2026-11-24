@@ -11,7 +11,7 @@
     "!dist/example"
   ],
   "engines": {
-    "node": ">=18"
+    "node": ">=24"
   },
   "scripts": {
     "generate:proto": "./scripts/generate-proto.sh",
@@ -32,7 +32,7 @@
     "@protobuf-ts/protoc": "^2.11.0",
     "@stylistic/eslint-plugin": "^6.0.1",
     "@types/jest": "^29.5.14",
-    "@types/node": "^20.19.1",
+    "@types/node": "^24.19.2",
     "eslint": "^10.15.0",
     "jest": "^29.7.0",
     "ts-jest": "^29.3.4",
