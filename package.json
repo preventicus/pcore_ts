@@ -14,7 +14,7 @@
     "node": ">=18"
   },
   "scripts": {
-    "generate:proto": "./scripts/INSTALL_PROTOBUF.sh",
+    "generate:proto": "./scripts/generate-proto.sh",
     "clean": "node -e \"require('fs').rmSync('dist', { recursive: true, force: true })\"",
     "build": "npm run generate:proto && npm run lint && npm run test && npm run clean && tsc && tsc-alias",
     "test": "jest",
