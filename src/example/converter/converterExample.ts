@@ -34,7 +34,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 import { DataCompressor } from "@/compress/DataCompressor"
 import { Converter } from "@tools/converter/Converter"
 import { DataForm } from "@tools/converter/DataForm"
-import { data } from "../ExampleData"
+import { data } from "@/example/ExampleData"
 
 function main() {
   const dataPb = DataCompressor.compress(data)
@@ -51,12 +51,13 @@ function main() {
   const dataPbConvertedFromDecompressedJson = Converter.convertFromJson(decompressedJson)
   const dataPbConvertedFromCompressedJson = Converter.convertFromJson(compressedJson)
 
+  // both forms lead to the same data, shown here in the compressed form (the protobuf JSON format)
   /* eslint-disable no-console */
   console.log("\n")
-  console.log(JSON.stringify(dataPbConvertedFromDecompressedJson))
+  console.log(Converter.convertToJson(dataPbConvertedFromDecompressedJson, DataForm.Compressed))
   console.log("\n")
-  console.log(JSON.stringify(dataPbConvertedFromCompressedJson))
-  /* eslint-disable no-console */
+  console.log(Converter.convertToJson(dataPbConvertedFromCompressedJson, DataForm.Compressed))
+  /* eslint-enable no-console */
 }
 
 main()

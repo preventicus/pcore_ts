@@ -43,61 +43,55 @@ export class TimestampsCompressor {
   /**
    * Compresses a sequence of Unix timestamps into a `CompressedTimestampsContainer`.
    *
-   * The compression algorithm detects sections of timestamps with consistent step durations,
-   * and stores metadata such as section sizes, inner and outer section durations.
+   * Implements the algorithm `CompressTimestamps` of the Pcore specification: the timestamps are
+   * split into sections with a constant step duration, and for each section its size, its inner
+   * section duration and its outer section duration (distance to the start of the previous section)
+   * are stored.
    *
    * @param unixTimestamps - The array of Unix timestamps in milliseconds.
    * @returns A `CompressedTimestampsContainer` representing the compressed form of the timestamps.
    */
-
   static compress(unixTimestamps: UnixTimestamps): CompressedTimestampsContainer {
     const compressedTimestampsContainer = CompressedTimestampsContainer.create()
 
-    const sectionIdxs = TimestampsCompressor.findSectionIdxs(unixTimestamps)
-    const numberOfSection = sectionIdxs.length
-    if (numberOfSection === 0) {
+    const sectionStartIdxs = TimestampsCompressor.findSectionIdxs(unixTimestamps)
+    if (sectionStartIdxs.length === 0) {
       return compressedTimestampsContainer
     }
 
-    const sizeUnixTimestamps = unixTimestamps.length
-    const firstUnixTimestampInMs = unixTimestamps[0]
+    compressedTimestampsContainer.firstUnixTimestampMs = unixTimestamps[0]
+    // each section ends where the next one starts, the last one at the end of the list
+    const sectionEndIdxs = [...sectionStartIdxs.slice(1), unixTimestamps.length]
+    // the first section is its own predecessor, so its outer section duration is 0
+    let previousStartIdx = 0
+    for (let k = 0; k < sectionStartIdxs.length; k++) {
+      const startIdx = sectionStartIdxs[k]
+      const sectionSize = sectionEndIdxs[k] - startIdx
 
-    compressedTimestampsContainer.firstUnixTimestampMs = firstUnixTimestampInMs
-    compressedTimestampsContainer.outerSectionsDurationsMs.push(0)
-
-    if (numberOfSection === 1) {
-      compressedTimestampsContainer.innerSectionsDurationsMs.push(sizeUnixTimestamps === 1 ? 0 : unixTimestamps[1] - firstUnixTimestampInMs)
-      compressedTimestampsContainer.sectionsSizes.push(sizeUnixTimestamps)
-      return compressedTimestampsContainer
+      compressedTimestampsContainer.sectionsSizes.push(sectionSize)
+      compressedTimestampsContainer.outerSectionsDurationsMs.push(unixTimestamps[startIdx] - unixTimestamps[previousStartIdx])
+      compressedTimestampsContainer.innerSectionsDurationsMs.push(sectionSize > 1 ? unixTimestamps[startIdx + 1] - unixTimestamps[startIdx] : 0)
+      previousStartIdx = startIdx
     }
-
-    compressedTimestampsContainer.innerSectionsDurationsMs.push(unixTimestamps[1] - firstUnixTimestampInMs)
-    compressedTimestampsContainer.sectionsSizes.push(sectionIdxs[1])
-
-    for (let i = 1; i <= (sectionIdxs.length - 2); i++) {
-      const previousSectionIdx = sectionIdxs[i - 1]
-      const currentSectionIdx = sectionIdxs[i]
-      const nextSectionIdx = sectionIdxs[i + 1]
-      compressedTimestampsContainer.innerSectionsDurationsMs.push(unixTimestamps[currentSectionIdx + 1] - unixTimestamps[currentSectionIdx])
-      compressedTimestampsContainer.outerSectionsDurationsMs.push(unixTimestamps[currentSectionIdx] - unixTimestamps[previousSectionIdx])
-      compressedTimestampsContainer.sectionsSizes.push(nextSectionIdx - currentSectionIdx)
-    }
-
-    const lastSectionIdx = sectionIdxs[sectionIdxs.length - 1]
-    compressedTimestampsContainer.outerSectionsDurationsMs.push(unixTimestamps[lastSectionIdx] - unixTimestamps[sectionIdxs[numberOfSection - 2]])
-    compressedTimestampsContainer.innerSectionsDurationsMs.push(sizeUnixTimestamps - 1 === lastSectionIdx ? 0 : unixTimestamps[lastSectionIdx + 1] - unixTimestamps[lastSectionIdx])
-    compressedTimestampsContainer.sectionsSizes.push(sizeUnixTimestamps - lastSectionIdx)
 
     return compressedTimestampsContainer
   }
 
+  /**
+   * Returns the indices of the timestamps at which a new section starts.
+   *
+   * Implements the algorithm `FindSectionIndices` of the Pcore specification.
+   *
+   * @param unixTimestampsInMs - Strictly increasing Unix timestamps in milliseconds.
+   * @returns The start indices of all sections, empty for empty input.
+   */
   static findSectionIdxs(unixTimestampsInMs: UnixTimestamps): SectionIdxs {
     const sectionIdxs: SectionIdxs = []
     if (unixTimestampsInMs.length === 0) return sectionIdxs
     let referenceTimeDurationInMs = 0
     let isNewSection = true
     sectionIdxs.push(0)
-    for(let i = 1; i < unixTimestampsInMs.length; i++) {
+    for (let i = 1; i < unixTimestampsInMs.length; i++) {
       const timeDurationInMs = unixTimestampsInMs[i] - unixTimestampsInMs[i - 1]
       if (isNewSection) {
         referenceTimeDurationInMs = timeDurationInMs

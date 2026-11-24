@@ -30,15 +30,14 @@
 # SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 set -euo pipefail
-pwd
+
+# Generates src/generated/pcore/ from the pcore.proto of the tag named in .pcore-version.
+# The code is generated in a temporary directory and replaces the existing one only after
+# everything has succeeded, so a failure (e.g. no network) leaves the project untouched.
 
 REPO_URL="https://github.com/preventicus/pcore.git"
-TMP_DIR="./tmp-pcore"
-PROTO_DIR="$TMP_DIR/protobuf_definitions"
 PROTO_FILE="pcore.proto"
 OUT_DIR="./src/generated/pcore"
-DEFAULT_VERSION="0.0.0"
-OUT_FILE="$OUT_DIR/pcoreVersion.ts"
 VERSION_FILE=".pcore-version"
 
 if [ ! -f "$VERSION_FILE" ]; then
@@ -48,31 +47,29 @@ fi
 
 SPECIFIED_TAG=$(cat "$VERSION_FILE")
 
-echo ">> Cloning repository from $REPO_URL..."
-rm -rf "$TMP_DIR"
-git clone "$REPO_URL" "$TMP_DIR"
+# removed on every exit, also after an error
+WORK_DIR="$(mktemp -d "${TMPDIR:-/tmp}/pcore-generate.XXXXXX")"
+trap 'rm -rf "$WORK_DIR"' EXIT
 
-cd "$TMP_DIR"
-git config advice.detachedHead false
+CLONE_DIR="$WORK_DIR/pcore"
+PROTO_DIR="$CLONE_DIR/protobuf_definitions"
+NEW_OUT_DIR="$WORK_DIR/generated"
+
+echo ">> Cloning repository from $REPO_URL..."
+git clone "$REPO_URL" "$CLONE_DIR"
 
 echo ">> Checking out tag: $SPECIFIED_TAG"
-git checkout "tags/$SPECIFIED_TAG" || {
+git -C "$CLONE_DIR" -c advice.detachedHead=false checkout "tags/$SPECIFIED_TAG" || {
     echo "❌ Tag '$SPECIFIED_TAG' not found." >&2
     exit 1
 }
 
 VERSION="${SPECIFIED_TAG#v}"
-cd - > /dev/null
-
-echo ">> Cleaning output directory..."
-rm -rf "$OUT_DIR"
-mkdir -p "$OUT_DIR"
-ls -ld "$OUT_DIR"
-echo "DEBUG: Absolut Path: $(readlink -f "$OUT_DIR")"
 
 echo ">> Compiling proto file with protobuf-ts..."
+mkdir -p "$NEW_OUT_DIR"
 PATH="./node_modules/.bin:$PATH" protoc \
-  --ts_out="$OUT_DIR" \
+  --ts_out="$NEW_OUT_DIR" \
   --ts_opt=long_type_number \
   --ts_opt=optimize_code_size \
   --proto_path="$PROTO_DIR" \
@@ -83,7 +80,7 @@ MAJOR=$((10#$MAJOR))
 MINOR=$((10#$MINOR))
 PATCH=$((10#$PATCH))
 
-cat <<EOF > "$OUT_FILE"
+cat <<EOF > "$NEW_OUT_DIR/pcoreVersion.ts"
 // This file is auto-generated. Do not modify manually.
 export const PcoreVersion = {
     major: ${MAJOR},
@@ -92,7 +89,9 @@ export const PcoreVersion = {
 };
 EOF
 
-echo ">> Cleaning up..."
-rm -rf "$TMP_DIR"
+echo ">> Replacing output directory..."
+rm -rf "$OUT_DIR"
+mkdir -p "$(dirname "$OUT_DIR")"
+mv "$NEW_OUT_DIR" "$OUT_DIR"
 
 echo "✅ Proto generation complete: $OUT_DIR"

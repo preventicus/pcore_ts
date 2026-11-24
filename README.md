@@ -27,17 +27,78 @@ All of the following are exported from the package root (`src/index.ts`).
 | `DataBuilder`, `MetadataBuilder`, `SensorBuilder`    | Fluent builders for creating valid decompressed data                   |
 | `DataCompressor`                                     | Compresses metadata, timestamps and sensors into protobuf data         |
 | `DataDecompressor`                                   | Decompresses protobuf data into the decompressed data model            |
-| `File`                                               | Reading/writing binary `.pcore` and JSON files                         |
+| `PcoreFile`                                          | Reading/writing binary `.pcore` and JSON files                         |
 | `Converter`, `DataForm`                              | Converts between protobuf data and compressed or decompressed JSON     |
 | `Inspector`                                          | Reads properties of protobuf data without decompressing it, validation |
 | `DataPb`, `Sensor`, `Metadata`, `Color`, …           | Protobuf types generated from the Pcore definition                     |
-| `InvalidDataException`                               | Thrown when data violates the Pcore validation rules                   |
+| `InvalidDataException`, `WrongValueException`        | Thrown when data violates the Pcore validation rules (structure / value range) |
+
+### 64-bit integers
+
+The library implements Pcore version 2.1.0. Unix timestamps and integer sensor values are 64-bit integers in Pcore,
+but are represented as JavaScript `number`. Therefore they must be safe integers (between `Number.MIN_SAFE_INTEGER`
+and `Number.MAX_SAFE_INTEGER`, i.e. ±(2^53 − 1)); this also applies to the differences between consecutive integer values.
+Data that violates this is rejected with a `WrongValueException` when compressing, decompressing or reading a `.pcore` file.
+
+For the same reason the unsigned integers of the compressed timestamps (first unix timestamp, sections sizes, inner and outer
+section durations) are checked when decompressing: JavaScript `number` also holds negative values and fractions,
+which are rejected with a `WrongValueException`. The same applies in both directions to the integer fields of the metadata and
+the sensor types: channel, wavelength, accelerometer type, timezone offset and version numbers.
+
+---
+
+### Validation
+
+Data is validated wherever it enters or leaves the library: `PcoreFile.readPcoreBinary`, `PcoreFile.writePcoreBinary`,
+`Converter.convertFromJson`, `Converter.convertToJson`, `DataCompressor.compress` and `DataDecompressor.decompress` throw an
+`InvalidDataException` or a `WrongValueException` for invalid data. The `get...` methods of the `Inspector` therefore do not
+validate again. For a protobuf object that was built by hand, call `Inspector.validateCompressed` before inspecting it.
+
+To examine a `.pcore` file that the validation rejects, switch the validation off explicitly. The file is then only
+decoded; a file that cannot be decoded at all is still rejected with an `InvalidDataException`:
+
+```
+const dataPb = PcoreFile.readPcoreBinary("rejected.pcore", { validate: false })
+```
 
 ---
 
 ## Installation
 
-To install start the `generate:proto` script.
+Node.js 24 or newer is required.
+
+### Using the library in another project
+
+The package is called `@preventicus/pcore`. It is not published in a package registry; install it directly from
+this git repository. npm then compiles the library on its own (script `prepare`):
+
+```
+npm install git+ssh://git@github.com/preventicus/pcore_ts.git#<branch, tag or commit>
+```
+
+Without `#...` npm takes the default branch.
+
+Afterwards import from the package name; the type definitions are included:
+
+```
+import { DataBuilder, DataCompressor, PcoreFile, SensorBuilder } from "@preventicus/pcore"
+
+const sensor = new SensorBuilder().withIntValues([5, 7]).withElectrocardiogramChannel(1).build()
+const data = new DataBuilder().withTimestamps([1000, 1010]).withSensor(sensor).build()
+PcoreFile.writePcoreBinary(DataCompressor.compress(data), "output.pcore")
+```
+
+Only the compiled library (`dist/`) is part of the installed package, not the sources, tests and examples.
+
+### Working on the library
+
+Clone this repository and install the dependencies with `npm install`; this also compiles the library into `dist/`.
+`npm test` runs the tests and `npm run lint` the linter.
+The same checks, together with the type check and a test build of the package, run on GitHub for every pull request
+and every push to `main` (`.github/workflows/checks.yml`).
+
+The protobuf code in `src/generated/pcore/` is part of the repository. `npm run generate:proto` is only needed after
+changing `.pcore-version`: it fetches the Pcore definition from GitHub and replaces the generated code.
 
 ---
 
@@ -45,18 +106,60 @@ To install start the `generate:proto` script.
 
 Convert .pcore file to decompressed JSON
 ```
-import { File, Converter, DataForm } from "@preventicus/pcore"
+import { PcoreFile, Converter, DataForm } from "@preventicus/pcore"
 
-const dataPb = File.readPcoreBinary("input.pcore")
+const dataPb = PcoreFile.readPcoreBinary("input.pcore")
 const json = Converter.convertToJson(dataPb, DataForm.Decompressed)
-File.writePcoreJson(json, "output.json")
+PcoreFile.writePcoreJson(json, "output.json")
 ```
 
 Convert decompressed JSON back to .pcore
 ```
-const json = File.readPcoreJson("output.json")
+const json = PcoreFile.readPcoreJson("output.json")
 const dataPb = Converter.convertFromJson(json)
-File.writePcoreBinary(dataPb, "output.pcore")
+PcoreFile.writePcoreBinary(dataPb, "output.pcore")
+```
+
+### JSON forms
+
+`Converter.convertToJson` writes one of two forms, and `Converter.convertFromJson` reads both.
+
+**`DataForm.Compressed`** is the compressed data in the [protobuf JSON format](https://protobuf.dev/programming-guides/json/).
+Every protobuf implementation can read and write it with the Pcore proto file, e.g. `json_format.Parse` in Python.
+A sensor holds its values container and its sensor type directly, enum values are written by name,
+64-bit integers as strings, and fields with their default value (e.g. `"channel": 0`) are omitted:
+
+```json
+{
+  "metadata": { "pcoreVersion": { "major": 2, "minor": 1 } },
+  "compressedTimestampsContainer": {
+    "firstUnixTimestampMs": "1000",
+    "outerSectionsDurationsMs": [0],
+    "innerSectionsDurationsMs": [10],
+    "sectionsSizes": [2]
+  },
+  "sensors": [
+    { "intValuesContainer": { "values": ["5", "2"] }, "electrocardiogram": { "channel": 1 } },
+    { "doubleValuesContainer": { "values": [0.5, 0.7] }, "photoplethysmograph": { "color": "COLOR_GREEN" } }
+  ]
+}
+```
+
+When reading, the alternatives that protobuf JSON allows are accepted as well: numbers instead of strings for 64-bit integers,
+numbers instead of names for enum values, and the field names of the proto file (`compressed_timestamps_container`).
+
+**`DataForm.Decompressed`** is a human-readable form of this library with the decompressed timestamps and values.
+It is not a protobuf JSON format:
+
+```json
+{
+  "metadata": { "timezoneOffsetMin": 0, "pcoreVersion": { "major": 2, "minor": 1, "patch": 0 } },
+  "timestamps": [1000, 1010],
+  "sensors": [
+    { "valuesType": "intValuesContainer", "values": [5, 7], "electrocardiogram": { "channel": 1 } },
+    { "valuesType": "doubleValuesContainer", "values": [0.5, 0.7], "photoplethysmograph": { "color": "GREEN", "channel": 0 } }
+  ]
+}
 ```
 
 For more examples see the `src/example` folder.

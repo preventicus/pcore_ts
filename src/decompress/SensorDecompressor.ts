@@ -32,6 +32,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 */
 
 import { Sensor } from "@/ProtobufDefinitions"
+import { getIntValues } from "@/util/SensorAccessors"
 
 /**
  * Provides functionality to decompress sensor data.
@@ -51,32 +52,23 @@ export class SensorDecompressor {
     const sensor = Sensor.create()
     sensor.type = structuredClone(sensorPb.type)
 
-    switch (sensorPb.values.oneofKind) {
-      case "intValuesContainer": {
-        const valuesPb = sensorPb.values.intValuesContainer.values
-        const sizeValuesPb = valuesPb.length
+    const compressedValues = getIntValues(sensorPb)
+    if (compressedValues === undefined) {
+      // double values are stored unchanged
+      sensor.values = structuredClone(sensorPb.values)
+      return sensor
+    }
 
-        const values = new Array<number>(sizeValuesPb)
-
-        if (sizeValuesPb > 0) {
-          values[0] = valuesPb[0]
-          for (let i = 1; i < sizeValuesPb; i++) {
-            values[i] = valuesPb[i] + values[i - 1]
-          }
-        }
-
-        sensor.values = {
-          oneofKind: "intValuesContainer",
-          intValuesContainer: {
-            values: values
-          }
-        }
-        break
-      }
-      case "doubleValuesContainer": {
-        sensor.values = structuredClone(sensorPb.values)
-        break
-      }
+    // DecompressIntegerValues: cumulative sum of the differences, starting from zero
+    const values: number[] = []
+    let cumulativeSum = 0
+    compressedValues.forEach(difference => {
+      cumulativeSum += difference
+      values.push(cumulativeSum)
+    })
+    sensor.values = {
+      oneofKind: "intValuesContainer",
+      intValuesContainer: { values }
     }
     return sensor
   }

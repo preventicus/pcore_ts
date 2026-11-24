@@ -36,57 +36,55 @@ import {
   Color,
   DataPb,
   Metadata,
+  Photoplethysmograph,
   Sensor
-} from "../../ProtobufDefinitions"
-import { DataCompressor } from "../../compress/DataCompressor"
+} from "@/ProtobufDefinitions"
+import { DataCompressor } from "@/compress/DataCompressor"
 import { Data } from "@/models/Data"
-import { DataDecompressor } from "../../decompress/DataDecompressor"
-import { DataForm } from "./DataForm"
-import { UnixTimestamps } from "../../models/UnixTimestamp"
+import { DataDecompressor } from "@/decompress/DataDecompressor"
+import { DataForm } from "@tools/converter/DataForm"
+import { UnixTimestamps } from "@/models/UnixTimestamp"
 import { Inspector } from "@tools/inspector/Inspector"
+import { InvalidDataException } from "@/Exception"
+import { JsonStructure } from "@tools/converter/JsonStructure"
+import { getPhotoplethysmographColor, getPhotoplethysmographWavelength, getValues } from "@/util/SensorAccessors"
 
-interface DecompressedPhotoplethysmographWavelengthSensorJson {
-    valuesType: string,
-    values: number[],
-    photoplethysmograph: {
-        wavelengthNm: number
-    }
+interface DecompressedSensorWithoutTypeJson {
+  valuesType: string
+  values: number[]
 }
 
-interface DecompressedPhotoplethysmographColorSensorJson {
-    valuesType: string,
-    values: number[],
-    photoplethysmograph: {
-        color: string
-    }
+interface DecompressedPhotoplethysmographSensorJson extends DecompressedSensorWithoutTypeJson {
+  photoplethysmograph: {
+    wavelengthNm?: number
+    color?: string
+    channel?: number
+  }
 }
 
-interface DecompressedAccelerometerSensorJson {
-    valuesType: string,
-    values: number[],
-    accelerometer: {
-        type: string
-    }
+interface DecompressedAccelerometerSensorJson extends DecompressedSensorWithoutTypeJson {
+  accelerometer: {
+    type: string
+    channel?: number
+  }
 }
 
-interface DecompressedElectrocardiogramSensorJson {
-    valuesType: string,
-    values: number[],
-    electrocardiogram: {
-        channel: number
-    }
+interface DecompressedElectrocardiogramSensorJson extends DecompressedSensorWithoutTypeJson {
+  electrocardiogram: {
+    channel?: number
+  }
 }
 
 type DecompressedSensor =
-      DecompressedPhotoplethysmographWavelengthSensorJson
-    | DecompressedPhotoplethysmographColorSensorJson
-    | DecompressedAccelerometerSensorJson
-    | DecompressedElectrocardiogramSensorJson
+  | DecompressedPhotoplethysmographSensorJson
+  | DecompressedAccelerometerSensorJson
+  | DecompressedElectrocardiogramSensorJson
+  | DecompressedSensorWithoutTypeJson
 
 interface DecompressedPcoreJson {
-    metadata?: Metadata,
-    timestamps: UnixTimestamps,
-    sensors: DecompressedSensor[]
+  metadata?: Metadata
+  timestamps: UnixTimestamps
+  sensors: DecompressedSensor[]
 }
 
 /**
@@ -97,28 +95,30 @@ export class Converter {
   /**
    * Converts a protobuf data object to a JSON string representation.
    *
-   * Depending on the data form, this either returns the raw protobuf object
-   * as JSON (compressed), or a human-readable decompressed format.
+   * Depending on the data form, this either returns the compressed data in the protobuf JSON format,
+   * which every protobuf implementation can read with the Pcore proto file, or a human-readable
+   * decompressed format of this library.
    *
    * @param dataPb - The protobuf data object to be converted.
-   * @param dataForm - Indicates the format of the input data (compressed or decompressed).
+   * @param dataForm - The form of the JSON to write (compressed or decompressed).
    * @param indent - Optional. Number of spaces to use for pretty-printing the output JSON.
    *                 If set to 0 (default), the output will be minified.
    * @returns A JSON string representing the protobuf data.
-   * @throws {Error} Throws if decompression or conversion fails, or if unsupported sensor types are encountered.
+   * @throws {InvalidDataException} If the data is structurally inconsistent.
+   * @throws {WrongValueException} If a single value is outside of its allowed range.
    */
   static convertToJson(dataPb: DataPb, dataForm: DataForm, indent: number = 0): string {
     switch (dataForm) {
       case DataForm.Compressed: {
         Inspector.validateCompressed(dataPb)
-        return JSON.stringify(dataPb, null, indent)
+        return DataPb.toJsonString(dataPb, { prettySpaces: indent })
       }
       case DataForm.Decompressed: {
         const data = DataDecompressor.decompress(dataPb) // validation is done in decompress method
         const decompressedPcoreJson: DecompressedPcoreJson = {
           metadata: data.metadata,
           timestamps: data.timestamps,
-          sensors: data.sensors.map(Converter.parseToDecompressedSensor)
+          sensors: data.sensors.map(Converter.toDecompressedSensorJson)
         }
         return JSON.stringify(decompressedPcoreJson, null, indent)
       }
@@ -126,94 +126,78 @@ export class Converter {
   }
 
   /**
-     * Converts a JSON string back into a DataPb object.
-     * Accepts both compressed and decompressed JSON structures.
-     *
-     * @param json - The JSON string to convert.
-     * @returns A DataPb object reconstructed from the JSON.
-     * @throws {Error} Throws if internal parsing fails or unsupported sensor types are encountered.
-     */
+   * Converts a JSON string back into a DataPb object.
+   * Accepts compressed JSON (the protobuf JSON format, also when written by another protobuf
+   * implementation) and the decompressed JSON of this library.
+   *
+   * @param json - The JSON string to convert.
+   * @returns A DataPb object reconstructed from the JSON.
+   * @throws {InvalidDataException} If the string is not valid JSON, does not have the structure of one of the two
+   *                                forms or holds structurally inconsistent data.
+   * @throws {WrongValueException} If a single value is outside of its allowed range.
+   */
   static convertFromJson(json: string): DataPb {
-    const parsedJson = JSON.parse(json)
-    if ("compressedTimestampsContainer" in parsedJson) {
-      const dataPb = parsedJson as DataPb
+    const parsedJson = JsonStructure.parseObject(json)
+    if (JsonStructure.isCompressed(parsedJson)) {
+      const dataPb = JsonStructure.parseCompressed(parsedJson)
       Inspector.validateCompressed(dataPb)
       return dataPb
     }
-    const decompressedPcoreJson = parsedJson as DecompressedPcoreJson
+    JsonStructure.checkDecompressed(parsedJson)
+    const decompressedPcoreJson = parsedJson as unknown as DecompressedPcoreJson
     const data: Data = {
-      metadata: decompressedPcoreJson.metadata,
+      metadata: JsonStructure.parseMetadata(parsedJson.metadata),
       timestamps: decompressedPcoreJson.timestamps,
-      sensors: decompressedPcoreJson.sensors.map(Converter.parseFromDecompressedSensor)
+      sensors: decompressedPcoreJson.sensors.map(Converter.fromDecompressedSensorJson)
     }
     return DataCompressor.compress(data) // validation is done in compress method
   }
 
   /**
-     * Converts a Sensor protobuf object into a decompressed JSON representation.
-     *
-     * @param sensor - The Sensor protobuf object.
-     * @returns A DecompressedSensor JSON object.
-     * @throws {Error} If the sensor type or value type is unsupported.
-     */
-  private static parseToDecompressedSensor(sensor: Sensor): DecompressedSensor {
-    let values: number[] = []
-    switch (sensor.values.oneofKind) {
-      case "intValuesContainer": {
-        values = sensor.values.intValuesContainer.values
-        break
-      }
-      case "doubleValuesContainer": {
-        values = sensor.values.doubleValuesContainer.values
-        break
-      }
-      default: {
-        /* istanbul ignore next */
-        // currently unreachable code since validator capture this error before
-        throw new Error(`Unsupported sensor value type: ${sensor.values.oneofKind}`)
-      }
+   * Converts a Sensor protobuf object into a decompressed JSON representation.
+   *
+   * Sensors without a sensor type or photoplethysmographs without light can occur in
+   * decompressed legacy files; they are written without the missing parts.
+   *
+   * @param sensor - The Sensor protobuf object.
+   * @returns A DecompressedSensor JSON object.
+   */
+  private static toDecompressedSensorJson(sensor: Sensor): DecompressedSensor {
+    const values = getValues(sensor)
+    /* istanbul ignore if */
+    if (values === undefined) {
+      // currently unreachable code since the validator captures this error before
+      throw new Error("Sensor values must be intValuesContainer or doubleValuesContainer")
     }
+    const valuesType = sensor.values.oneofKind as string
 
     switch (sensor.type.oneofKind) {
       case "accelerometer": {
         return {
-          valuesType: sensor.values.oneofKind,
+          valuesType,
           values,
           accelerometer: {
-            type: AccelerometerType[sensor.type.accelerometer.type]
+            type: AccelerometerType[sensor.type.accelerometer.type],
+            channel: sensor.type.accelerometer.channel
           }
         } satisfies DecompressedAccelerometerSensorJson
       }
       case "photoplethysmograph": {
-        switch (sensor.type.photoplethysmograph.light.oneofKind) {
-          case "wavelengthNm": {
-            return {
-              valuesType: sensor.values.oneofKind,
-              values,
-              photoplethysmograph: {
-                wavelengthNm: sensor.type.photoplethysmograph.light.wavelengthNm,
-              }
-            } satisfies DecompressedPhotoplethysmographWavelengthSensorJson
+        const wavelengthNm = getPhotoplethysmographWavelength(sensor)
+        const color = getPhotoplethysmographColor(sensor)
+        return {
+          valuesType,
+          values,
+          photoplethysmograph: {
+            ...(wavelengthNm !== undefined ? { wavelengthNm } : {}),
+            ...(color !== undefined ? { color: Color[color] } : {}),
+            channel: sensor.type.photoplethysmograph.channel
           }
-          case "color": {
-            return {
-              valuesType: sensor.values.oneofKind,
-              values,
-              photoplethysmograph: {
-                color: Color[sensor.type.photoplethysmograph.light.color],
-              }
-            } satisfies DecompressedPhotoplethysmographColorSensorJson
-          }
-          default: {
-            /* istanbul ignore next */
-            // currently unreachable code since validator capture this error before
-            throw new Error(`Unsupported sensor photoplethysmograph type: ${sensor.type.photoplethysmograph.light.oneofKind}`)
-          }
-        }
+        } satisfies DecompressedPhotoplethysmographSensorJson
       }
       case "electrocardiogram": {
         return {
-          valuesType: sensor.values.oneofKind,
+          valuesType,
           values,
           electrocardiogram: {
             channel: sensor.type.electrocardiogram.channel
@@ -221,21 +205,22 @@ export class Converter {
         } satisfies DecompressedElectrocardiogramSensorJson
       }
       default: {
-        /* istanbul ignore next */
-        // currently unreachable code since validator capture this error before
-        throw new Error(`Unsupported sensor type: ${sensor.type.oneofKind}`)
+        return { valuesType, values } satisfies DecompressedSensorWithoutTypeJson
       }
     }
   }
 
   /**
-     * Converts a decompressed JSON representation of a sensor back into a Sensor protobuf object.
-     *
-     * @param sensor - The decompressed sensor JSON object.
-     * @returns A Sensor protobuf object.
-     * @throws {Error} If the sensor type or value type is unsupported.
-     */
-  private static parseFromDecompressedSensor(sensor: DecompressedSensor): Sensor {
+   * Converts a decompressed JSON representation of a sensor back into a Sensor protobuf object.
+   *
+   * Missing `channel` fields (e.g. in JSON written before they existed) default to 0.
+   * A sensor without sensor type is converted as such and rejected by the validation in `DataCompressor.compress`.
+   *
+   * @param sensor - The decompressed sensor JSON object.
+   * @returns A Sensor protobuf object.
+   * @throws {InvalidDataException} If the value type is unsupported.
+   */
+  private static fromDecompressedSensorJson(sensor: DecompressedSensor): Sensor {
     const values: Sensor["values"] = (() => {
       switch (sensor.valuesType) {
         case "intValuesContainer": {
@@ -245,49 +230,47 @@ export class Converter {
           return { oneofKind: "doubleValuesContainer", doubleValuesContainer: { values: sensor.values } }
         }
         default: {
-          /* istanbul ignore next */
-          // currently unreachable code since validator capture this error before
-          throw new Error(`Unsupported sensor value type: ${sensor.valuesType}`)
+          throw new InvalidDataException("Converter.fromDecompressedSensorJson", `Unsupported sensor value type: ${sensor.valuesType}`)
         }
       }
     })()
 
-    let type: Sensor["type"]
+    let type: Sensor["type"] = { oneofKind: undefined }
     if ("accelerometer" in sensor) {
       type = {
         oneofKind: "accelerometer",
         accelerometer: {
-          type: AccelerometerType[sensor.accelerometer.type as keyof typeof AccelerometerType]
+          type: Converter.parseEnum(AccelerometerType, sensor.accelerometer.type, AccelerometerType.UNSPECIFIED),
+          channel: sensor.accelerometer.channel ?? 0
         }
       }
     } else if ("electrocardiogram" in sensor) {
       type = {
         oneofKind: "electrocardiogram",
-        electrocardiogram: { channel: sensor.electrocardiogram.channel }
+        electrocardiogram: { channel: sensor.electrocardiogram.channel ?? 0 }
       }
     } else if ("photoplethysmograph" in sensor) {
       const photoplethysmograph = sensor.photoplethysmograph
-      if ("color" in photoplethysmograph) {
-        const colorEnum = photoplethysmograph.color in Color ? Color[photoplethysmograph.color as keyof typeof Color] : Color.UNSPECIFIED
-        type = {
-          oneofKind: "photoplethysmograph",
-          photoplethysmograph: { light: { oneofKind: "color", color: colorEnum } }
-        }
-      } else if ("wavelengthNm" in photoplethysmograph) {
-        type = {
-          oneofKind: "photoplethysmograph",
-          photoplethysmograph: { light: { oneofKind: "wavelengthNm", wavelengthNm: photoplethysmograph.wavelengthNm } }
-        }
-      } else {
-        /* istanbul ignore next */
-        // currently unreachable code since validator capture this error before
-        throw new Error("Unsupported photoplethysmograph type")
+      let light: Photoplethysmograph["light"] = { oneofKind: undefined }
+      if (photoplethysmograph.color !== undefined) {
+        light = { oneofKind: "color", color: Converter.parseEnum(Color, photoplethysmograph.color, Color.UNSPECIFIED) }
+      } else if (photoplethysmograph.wavelengthNm !== undefined) {
+        light = { oneofKind: "wavelengthNm", wavelengthNm: photoplethysmograph.wavelengthNm }
       }
-    } else {
-      /* istanbul ignore next */
-      // currently unreachable code since validator capture this error before
-      throw new Error("Unsupported sensor type")
+      type = {
+        oneofKind: "photoplethysmograph",
+        photoplethysmograph: { light, channel: photoplethysmograph.channel ?? 0 }
+      }
     }
     return { values, type }
+  }
+
+  /**
+   * Returns the enum value with the given name, or `unknownValue` if the name is not a member of the enum.
+   * Unknown names are therefore rejected by the validation of the allowed sensor values.
+   */
+  private static parseEnum<T extends number>(enumObject: Record<string, string | number>, name: string, unknownValue: T): T {
+    const value = enumObject[name]
+    return typeof value === "number" ? value as T : unknownValue
   }
 }

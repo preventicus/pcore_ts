@@ -32,25 +32,25 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 */
 
 import { TimestampsDecompressor } from "@/decompress/TimestampsDecompressor"
-import { CompressedTimestampsContainer } from "../../src/ProtobufDefinitions"
+import { CompressedTimestampsContainer } from "@/ProtobufDefinitions"
 import { UnixTimestamp } from "@/models/UnixTimestamp"
 
-function fillCompressedTimestampsContainerPb(fistUnixTimestamp: UnixTimestamp, innerSectionDurations: number[], outerSectionDurations: number[], sectionSizes: number[]): CompressedTimestampsContainer {
+function fillCompressedTimestampsContainerPb(firstUnixTimestamp: UnixTimestamp, innerSectionDurations: number[], outerSectionDurations: number[], sectionSizes: number[]): CompressedTimestampsContainer {
   const compressedTimestampsContainer = CompressedTimestampsContainer.create()
-  compressedTimestampsContainer.firstUnixTimestampMs = fistUnixTimestamp
+  compressedTimestampsContainer.firstUnixTimestampMs = firstUnixTimestamp
   compressedTimestampsContainer.innerSectionsDurationsMs = innerSectionDurations
   compressedTimestampsContainer.outerSectionsDurationsMs = outerSectionDurations
   compressedTimestampsContainer.sectionsSizes = sectionSizes
   return compressedTimestampsContainer
 }
 
-describe("TimestampsDecompressor", () => {
-  test("ZeroTimestampTest", () => {
+describe("TimestampsDecompressorTest", () => {
+  test("EmptyTimestampsTest", () => {
     const compressedTimestampsContainer = fillCompressedTimestampsContainerPb(
       0,
-      [0],
-      [0],
-      [0]
+      [],
+      [],
+      []
     )
     const decompressed = TimestampsDecompressor.decompress(compressedTimestampsContainer)
     expect(decompressed.length).toBe(0)
@@ -198,6 +198,18 @@ describe("TimestampsDecompressor", () => {
     const decompressed = TimestampsDecompressor.decompress(compressedTimestampsContainer)
     expect(decompressed.length).toBe(5)
     expect(decompressed).toEqual([1000, 1010, 1030, 1060, 1100])
+  })
+
+  test("LargeInnerSectionDurationTest", () => {
+    const compressedTimestampsContainer = fillCompressedTimestampsContainerPb(
+      1,
+      [3000000000],
+      [0],
+      [2]
+    )
+    const decompressed = TimestampsDecompressor.decompress(compressedTimestampsContainer)
+    expect(decompressed.length).toBe(2)
+    expect(decompressed).toEqual([1, 3000000001])
   })
 
   test("RealDataTest", () => {

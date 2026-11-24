@@ -14,7 +14,7 @@
       "@/*": ["src/*"],
       "@generated/*": ["src/generated/pcore/*"],
       "@tools/*": ["src/tools/*"],
-      "@example/*": ["example/*"]
+      "@tests/*": ["tests/*"]
     }
   },
   "include": ["src/**/*.ts", "tests/**/*.ts"],

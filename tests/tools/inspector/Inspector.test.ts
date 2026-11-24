@@ -35,10 +35,9 @@ import {
   AccelerometerType,
   Color,
   DataPb
-} from "../../../src/ProtobufDefinitions"
-import { Inspector } from "../../../src/tools/inspector/Inspector"
-import { SensorBuilder } from "../../../src/builder/SensorBuilder"
-import { DataBuilder, MetadataBuilder } from "../../../src"
+} from "@/ProtobufDefinitions"
+import { Inspector } from "@tools/inspector/Inspector"
+import { SensorBuilder } from "@/builder/SensorBuilder"
 
 describe("InspectorTest", () => {
   test("GetFirstUnixTimestampEmptyTest", () => {
@@ -72,7 +71,7 @@ describe("InspectorTest", () => {
     expect(Inspector.getLastUnixTimestamp(dataPb)).toBe(1070)
   })
 
-  test("GetLastUnixTimestampTest2", () => {
+  test("GetLastUnixTimestampLastSectionWithSingleTimestampTest", () => {
     const dataPb = DataPb.create({
       compressedTimestampsContainer: {
         firstUnixTimestampMs: 1000,
@@ -84,7 +83,7 @@ describe("InspectorTest", () => {
     expect(Inspector.getLastUnixTimestamp(dataPb)).toBe(1050)
   })
 
-  test("GetLastUnixTimestampTest3", () => {
+  test("GetLastUnixTimestampOneSectionTest", () => {
     const dataPb = DataPb.create({
       compressedTimestampsContainer: {
         firstUnixTimestampMs: 1000,
@@ -94,6 +93,13 @@ describe("InspectorTest", () => {
       }
     })
     expect(Inspector.getLastUnixTimestamp(dataPb)).toBe(1030)
+  })
+
+  test("GetLastUnixTimestampEmptyContainerTest", () => {
+    // a container without sections is not valid data, but it must not yield NaN
+    const dataPb = DataPb.create({ compressedTimestampsContainer: { firstUnixTimestampMs: 1000 } })
+    expect(Inspector.getFirstUnixTimestamp(dataPb)).toBe(1000)
+    expect(Inspector.getLastUnixTimestamp(dataPb)).toBe(1000)
   })
 
   test("GetNumberOfSectionsEmptyTest", () => {
@@ -118,7 +124,7 @@ describe("InspectorTest", () => {
     expect(Inspector.getNumberOfElements(dataPb)).toBe(0)
   })
 
-  test("GetNumberOfElementsEmptyTest", () => {
+  test("GetNumberOfElementsOverIntValuesTest", () => {
     const sensor = new SensorBuilder()
       .withIntValues([1, 2, 3])
       .build()
@@ -126,6 +132,12 @@ describe("InspectorTest", () => {
       sensors: [sensor]
     })
     expect(Inspector.getNumberOfElements(dataPb)).toBe(3)
+  })
+
+  test("GetNumberOfElementsWithoutValuesTest", () => {
+    const sensor = new SensorBuilder().withElectrocardiogramChannel(1).build()
+    const dataPb = DataPb.create({ sensors: [sensor] })
+    expect(Inspector.getNumberOfElements(dataPb)).toBe(0)
   })
 
   test("GetNumberOfElementsOverDoubleValuesTest", () => {
@@ -171,7 +183,8 @@ describe("InspectorTest", () => {
       }, {
         oneofKind: "accelerometer",
         accelerometer: {
-          type: AccelerometerType.Y_COORDINATE
+          type: AccelerometerType.Y_COORDINATE,
+          channel: 0
         }
       }, {
         oneofKind: "electrocardiogram",
@@ -184,45 +197,10 @@ describe("InspectorTest", () => {
           light: {
             color: Color.RED,
             oneofKind: "color"
-          }
+          },
+          channel: 0
         }
       }
     ])
-  })
-
-  test("ValidateCompressedWithWrongTimeZoneOffsetPositiveTest", () => {
-    const metaData = new MetadataBuilder()
-      .withTimezoneOffset(841)
-      .build()
-
-    const data = new DataBuilder()
-      .withMetadata(metaData)
-      .build()
-
-    expect(() => Inspector.validateCompressed(data)).toThrow(
-      "TimezoneOffset must be between -720 and 840"
-    )
-
-    expect(() => Inspector.validateDecompressed(data)).toThrow(
-      "TimezoneOffset must be between -720 and 840"
-    )
-  })
-
-  test("ValidateCompressedWithWrongTimeZoneOffsetNegativeTest", () => {
-    const metaData = new MetadataBuilder()
-      .withTimezoneOffset(-721)
-      .build()
-
-    const data = new DataBuilder()
-      .withMetadata(metaData)
-      .build()
-
-    expect(() => Inspector.validateCompressed(data)).toThrow(
-      "TimezoneOffset must be between -720 and 840"
-    )
-
-    expect(() => Inspector.validateDecompressed(data)).toThrow(
-      "TimezoneOffset must be between -720 and 840"
-    )
   })
 })

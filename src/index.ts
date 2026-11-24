@@ -31,23 +31,24 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 */
 
-export * from "./models/Data"
-export * from "./models/UnixTimestamp"
-export * from "./models/SectionIdxs"
+export * from "@/models/Data"
+export * from "@/models/UnixTimestamp"
+export * from "@/models/SectionIdxs"
 
-export * from "./builder/DataBuilder"
-export * from "./builder/MetadataBuilder"
-export * from "./builder/SensorBuilder"
+export * from "@/builder/DataBuilder"
+export * from "@/builder/MetadataBuilder"
+export * from "@/builder/SensorBuilder"
 
-export * from "./compress/DataCompressor"
+export * from "@/compress/DataCompressor"
 
-export * from "./decompress/DataDecompressor"
+export * from "@/decompress/DataDecompressor"
 
-export * from "@/tools/file/File"
+export * from "@/tools/file/PcoreFile"
 export * from "@/tools/inspector/Inspector"
 export * from "@/tools/converter/Converter"
 export * from "@/tools/converter/DataForm"
 
-export * from "./ProtobufDefinitions"
-export * from "./Exception"
+export * from "@/ProtobufDefinitions"
+export * from "@/util/SensorAccessors"
+export * from "@/Exception"
 

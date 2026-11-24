@@ -33,8 +33,8 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 import { TimestampsCompressor } from "@/compress/TimestampsCompressor"
 
-describe("TimestampsCompressor", () => {
-  test("ZeroTimestampTest", () => {
+describe("TimestampsCompressorTest", () => {
+  test("EmptyTimestampsTest", () => {
     const unixTimestamps: number[] = []
 
     const compressed = TimestampsCompressor.compress(unixTimestamps)
@@ -187,6 +187,16 @@ describe("TimestampsCompressor", () => {
     expect(compressed.outerSectionsDurationsMs).toEqual([0, 30, 70])
   })
 
+  test("LargeInnerSectionDurationTest", () => {
+    const timestamps = [1, 3000000001]
+    const compressed = TimestampsCompressor.compress(timestamps)
+
+    expect(compressed.firstUnixTimestampMs).toBe(1)
+    expect(compressed.sectionsSizes).toEqual([2])
+    expect(compressed.innerSectionsDurationsMs).toEqual([3000000000])
+    expect(compressed.outerSectionsDurationsMs).toEqual([0])
+  })
+
   test("RealDataTest", () => {
     const timestamps = [
       1675732789987, 1675732790027, 1675732790067, 1675732790107, 1675732790147,
@@ -194,7 +204,7 @@ describe("TimestampsCompressor", () => {
       1675732790467, 1675732790507, 1675732790547, 1675732790587, 1675732790627,
       1675732790667, 1675732790707, 1675732790747, 1675732790867, 1675732790947,
       1675732791027, 1675732791107, 1675732791187, 1675732791347, 1675732791387,
-      1675732791427,
+      1675732791427
     ]
     const compressed = TimestampsCompressor.compress(timestamps)
 

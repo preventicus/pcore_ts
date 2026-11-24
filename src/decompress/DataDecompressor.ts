@@ -50,6 +50,7 @@ export class DataDecompressor {
    * @param dataPb - The compressed data in protocol buffer format (`DataPb`).
    * @returns A fully reconstructed `Data` object including metadata, timestamps, and sensors.
    * @throws {InvalidDataException} If the compressed data is structurally invalid or inconsistent.
+   * @throws {WrongValueException} If a single value is outside of its allowed range (e.g. a timezone offset of 900).
    */
   static decompress(dataPb: DataPb): Data {
     Inspector.validateCompressed(dataPb)
@@ -59,9 +60,10 @@ export class DataDecompressor {
       metadata = structuredClone(dataPb.metadata)
     }
 
-    const timestamps = TimestampsDecompressor.decompress(dataPb.compressedTimestampsContainer)
+    // rule 1 of the validation above guarantees that the timestamps container is present
+    const timestamps = TimestampsDecompressor.decompress(dataPb.compressedTimestampsContainer!)
 
-    const sensors : Sensor[] = []
+    const sensors: Sensor[] = []
 
     dataPb.sensors.forEach(sensorPb => {
       const sensor = SensorDecompressor.decompress(sensorPb)

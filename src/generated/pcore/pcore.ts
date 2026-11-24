@@ -2,7 +2,7 @@
 // @generated from protobuf file "pcore.proto" (package "com.preventicus.pcore", syntax proto3)
 // tslint:disable
 //
-// 
+//
 //
 //Created by Steve Merschel 2022.
 //
@@ -15,20 +15,20 @@
 //this list of conditions and the following disclaimer.
 //
 //2. Redistributions in binary form must reproduce the above copyright notice,
-//this list of conditions and the following disclaimer in the documentation 
+//this list of conditions and the following disclaimer in the documentation
 //and/or other materials provided with the distribution.
 //
 //3. Neither the name of the copyright holder nor the names of its contributors
 //may be used to endorse or promote products derived from this software without
 //specific prior written permission.
 //
-//THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND 
-//ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED 
+//THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND
+//ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
 //WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED.
 //IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT,
-//INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, 
-//BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, 
-//DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF 
+//INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING,
+//BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE,
+//DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF
 //LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE
 //OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED
 //OF THE POSSIBILITY OF SUCH DAMAGE.
@@ -91,7 +91,7 @@ export interface Data_Metadata {
     /**
      * @generated from protobuf field: sint32 timezone_offset_min = 1
      */
-    timezoneOffsetMin: number; // The time zone is set in minutes 
+    timezoneOffsetMin: number; // offset of local time to UTC in minutes, e.g. 60 for UTC+01:00 and -300 for UTC-05:00; valid range: -720..840 (inclusive)
     /**
      * @generated from protobuf field: com.preventicus.pcore.Version pcore_version = 2
      */
@@ -123,7 +123,7 @@ export interface Data_Metadata_Device {
     firmwareVersion?: Version;
 }
 // 
-// Timestamps 
+// Timestamps
 
 /**
  * @generated from protobuf message com.preventicus.pcore.Data.CompressedTimestampsContainer
@@ -154,7 +154,7 @@ export interface Data_CompressedTimestampsContainer {
  */
 export interface Data_Sensor {
     /**
-     * @generated from protobuf oneof: Values
+     * @generated from protobuf oneof: values
      */
     values: {
         oneofKind: "intValuesContainer";
@@ -172,7 +172,7 @@ export interface Data_Sensor {
         oneofKind: undefined;
     };
     /**
-     * @generated from protobuf oneof: Type
+     * @generated from protobuf oneof: type
      */
     type: {
         oneofKind: "photoplethysmograph";
@@ -197,7 +197,7 @@ export interface Data_Sensor {
     };
 }
 // 
-// Values 
+// Values
 
 /**
  * @generated from protobuf message com.preventicus.pcore.Data.Sensor.IntValuesContainer
@@ -227,7 +227,11 @@ export interface Data_Sensor_Accelerometer {
     /**
      * @generated from protobuf field: com.preventicus.pcore.Data.Sensor.Accelerometer.Type type = 1
      */
-    type: Data_Sensor_Accelerometer_Type;
+    type: Data_Sensor_Accelerometer_Type; // TYPE_UNSPECIFIED is not allowed
+    /**
+     * @generated from protobuf field: uint32 channel = 2
+     */
+    channel: number; // distinguishes several accelerometers of the same type (e.g. different devices or body positions)
 }
 /**
  * @generated from protobuf enum com.preventicus.pcore.Data.Sensor.Accelerometer.Type
@@ -250,6 +254,10 @@ export enum Data_Sensor_Accelerometer_Type {
      */
     Z_COORDINATE = 3,
     /**
+     * Euclidean norm of the differences of the x, y and z values (same channel) to the previous timestamp:
+     *   value[i] = sqrt((x[i] - x[i-1])^2 + (y[i] - y[i-1])^2 + (z[i] - z[i-1])^2)
+     * For the first timestamp the previous values are 0: value[0] = sqrt(x[0]^2 + y[0]^2 + z[0]^2)
+     *
      * @generated from protobuf enum value: TYPE_EUCLIDEAN_DIFFERENCES_NORM = 4;
      */
     EUCLIDEAN_DIFFERENCES_NORM = 4
@@ -259,23 +267,29 @@ export enum Data_Sensor_Accelerometer_Type {
  */
 export interface Data_Sensor_Photoplethysmograph {
     /**
-     * @generated from protobuf oneof: Light
+     * must be set
+     *
+     * @generated from protobuf oneof: light
      */
     light: {
         oneofKind: "wavelengthNm";
         /**
          * @generated from protobuf field: uint32 wavelength_nm = 1
          */
-        wavelengthNm: number;
+        wavelengthNm: number; // LED-based PPG sensors (e.g. wearables): wavelength of the LED in nanometers; valid range: 350..1000 (inclusive)
     } | {
         oneofKind: "color";
         /**
          * @generated from protobuf field: com.preventicus.pcore.Data.Sensor.Photoplethysmograph.Color color = 2
          */
-        color: Data_Sensor_Photoplethysmograph_Color;
+        color: Data_Sensor_Photoplethysmograph_Color; // camera-based PPG (e.g. smartphones): color channel of the RGB image sensor; COLOR_UNSPECIFIED is not allowed
     } | {
         oneofKind: undefined;
     };
+    /**
+     * @generated from protobuf field: uint32 channel = 3
+     */
+    channel: number; // distinguishes several photodiodes / measurement sites with the same light
 }
 /**
  * @generated from protobuf enum com.preventicus.pcore.Data.Sensor.Photoplethysmograph.Color
@@ -305,7 +319,7 @@ export interface Data_Sensor_Electrocardiogram {
     /**
      * @generated from protobuf field: uint32 channel = 1
      */
-    channel: number;
+    channel: number; // distinguishes several ECG channels (leads); valid range: 0..22 (inclusive)
 }
 // @generated message type with reflection information, may provide speed optimized methods
 class Version$Type extends MessageType<Version> {
@@ -862,12 +876,14 @@ export const Data_Sensor_DoubleValuesContainer = new Data_Sensor_DoubleValuesCon
 class Data_Sensor_Accelerometer$Type extends MessageType<Data_Sensor_Accelerometer> {
     constructor() {
         super("com.preventicus.pcore.Data.Sensor.Accelerometer", [
-            { no: 1, name: "type", kind: "enum", T: () => ["com.preventicus.pcore.Data.Sensor.Accelerometer.Type", Data_Sensor_Accelerometer_Type, "TYPE_"] }
+            { no: 1, name: "type", kind: "enum", T: () => ["com.preventicus.pcore.Data.Sensor.Accelerometer.Type", Data_Sensor_Accelerometer_Type, "TYPE_"] },
+            { no: 2, name: "channel", kind: "scalar", T: 13 /*ScalarType.UINT32*/ }
         ]);
     }
     create(value?: PartialMessage<Data_Sensor_Accelerometer>): Data_Sensor_Accelerometer {
         const message = globalThis.Object.create((this.messagePrototype!));
         message.type = 0;
+        message.channel = 0;
         if (value !== undefined)
             reflectionMergePartial<Data_Sensor_Accelerometer>(this, message, value);
         return message;
@@ -879,6 +895,9 @@ class Data_Sensor_Accelerometer$Type extends MessageType<Data_Sensor_Acceleromet
             switch (fieldNo) {
                 case /* com.preventicus.pcore.Data.Sensor.Accelerometer.Type type */ 1:
                     message.type = reader.int32();
+                    break;
+                case /* uint32 channel */ 2:
+                    message.channel = reader.uint32();
                     break;
                 default:
                     let u = options.readUnknownField;
@@ -895,6 +914,9 @@ class Data_Sensor_Accelerometer$Type extends MessageType<Data_Sensor_Acceleromet
         /* com.preventicus.pcore.Data.Sensor.Accelerometer.Type type = 1; */
         if (message.type !== 0)
             writer.tag(1, WireType.Varint).int32(message.type);
+        /* uint32 channel = 2; */
+        if (message.channel !== 0)
+            writer.tag(2, WireType.Varint).uint32(message.channel);
         let u = options.writeUnknownFields;
         if (u !== false)
             (u == true ? UnknownFieldHandler.onWrite : u)(this.typeName, message, writer);
@@ -910,12 +932,14 @@ class Data_Sensor_Photoplethysmograph$Type extends MessageType<Data_Sensor_Photo
     constructor() {
         super("com.preventicus.pcore.Data.Sensor.Photoplethysmograph", [
             { no: 1, name: "wavelength_nm", kind: "scalar", oneof: "light", T: 13 /*ScalarType.UINT32*/ },
-            { no: 2, name: "color", kind: "enum", oneof: "light", T: () => ["com.preventicus.pcore.Data.Sensor.Photoplethysmograph.Color", Data_Sensor_Photoplethysmograph_Color, "COLOR_"] }
+            { no: 2, name: "color", kind: "enum", oneof: "light", T: () => ["com.preventicus.pcore.Data.Sensor.Photoplethysmograph.Color", Data_Sensor_Photoplethysmograph_Color, "COLOR_"] },
+            { no: 3, name: "channel", kind: "scalar", T: 13 /*ScalarType.UINT32*/ }
         ]);
     }
     create(value?: PartialMessage<Data_Sensor_Photoplethysmograph>): Data_Sensor_Photoplethysmograph {
         const message = globalThis.Object.create((this.messagePrototype!));
         message.light = { oneofKind: undefined };
+        message.channel = 0;
         if (value !== undefined)
             reflectionMergePartial<Data_Sensor_Photoplethysmograph>(this, message, value);
         return message;
@@ -937,6 +961,9 @@ class Data_Sensor_Photoplethysmograph$Type extends MessageType<Data_Sensor_Photo
                         color: reader.int32()
                     };
                     break;
+                case /* uint32 channel */ 3:
+                    message.channel = reader.uint32();
+                    break;
                 default:
                     let u = options.readUnknownField;
                     if (u === "throw")
@@ -955,6 +982,9 @@ class Data_Sensor_Photoplethysmograph$Type extends MessageType<Data_Sensor_Photo
         /* com.preventicus.pcore.Data.Sensor.Photoplethysmograph.Color color = 2; */
         if (message.light.oneofKind === "color")
             writer.tag(2, WireType.Varint).int32(message.light.color);
+        /* uint32 channel = 3; */
+        if (message.channel !== 0)
+            writer.tag(3, WireType.Varint).uint32(message.channel);
         let u = options.writeUnknownFields;
         if (u !== false)
             (u == true ? UnknownFieldHandler.onWrite : u)(this.typeName, message, writer);

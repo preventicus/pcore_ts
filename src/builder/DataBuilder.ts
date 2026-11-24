@@ -69,7 +69,8 @@ export class DataBuilder {
    * @returns The current builder instance for method chaining
    */
   withSensors(sensors: Sensor[]): this {
-    this.sensors = sensors
+    // copy the list, so that withSensor() does not modify the caller's array
+    this.sensors = [...sensors]
     return this
   }
 
@@ -85,13 +86,14 @@ export class DataBuilder {
 
   /**
    * Builds the final Data object using the provided components.
+   * The returned object is a copy, so later changes to the builder do not affect it.
    * @returns A fully constructed Data object
    */
   build(): Data {
     return {
-      metadata: this.metadata,
-      timestamps: this.timestamps,
-      sensors: this.sensors
+      metadata: this.metadata === undefined ? undefined : structuredClone(this.metadata),
+      timestamps: [...this.timestamps],
+      sensors: this.sensors.map(sensor => structuredClone(sensor))
     }
   }
 }

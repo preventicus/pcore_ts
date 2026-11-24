@@ -32,38 +32,58 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 */
 
 import {
-  Accelerometer,
   AccelerometerType,
   Color,
   DataPb,
-  Electrocardiogram,
-  Photoplethysmograph, Sensor
+  Metadata,
+  Sensor,
+  Version
 } from "@/ProtobufDefinitions"
 import { UnixTimestamp } from "@/models/UnixTimestamp"
 import { Data } from "@/models/Data"
-import { InvalidDataException } from "@/Exception"
+import { InvalidDataException, WrongValueException } from "@/Exception"
+import { TimestampsCompressor } from "@/compress/TimestampsCompressor"
+import {
+  getAccelerometerChannel,
+  getAccelerometerType,
+  getDoubleValues,
+  getElectrocardiogramChannel,
+  getIntValues,
+  getPhotoplethysmographChannel,
+  getPhotoplethysmographColor,
+  getPhotoplethysmographWavelength,
+  getValues
+} from "@/util/SensorAccessors"
 
-export type SensorType = {
-  oneofKind: "photoplethysmograph";
-  photoplethysmograph: Photoplethysmograph;
-} | {
-  oneofKind: "accelerometer";
-  accelerometer: Accelerometer;
-} | {
-  oneofKind: "electrocardiogram";
-  electrocardiogram: Electrocardiogram;
-} | {
-  oneofKind: undefined;
-}
+const UINT32_MAX = 4294967295
+const INT32_MIN = -2147483648
+const INT32_MAX = 2147483647
+const MIN_TIMEZONE_OFFSET_MIN = -720
+const MAX_TIMEZONE_OFFSET_MIN = 840
+const MIN_PHOTOPLETHYSMOGRAPH_WAVELENGTH_NM = 350
+const MAX_PHOTOPLETHYSMOGRAPH_WAVELENGTH_NM = 1000
+const MAX_ELECTROCARDIOGRAM_CHANNEL = 22
 
 /**
- * Utility class for inspecting compressed data without full decompression.
+ * The sensor type of a sensor: a photoplethysmograph, an accelerometer, an electrocardiogram or none.
+ * Derived from the generated protobuf type, so that further sensor types of the specification are included automatically.
+ */
+export type SensorType = Sensor["type"]
+
+/**
+ * Utility class for inspecting compressed data without full decompression, and for validating data.
+ *
+ * The `get...` methods expect valid compressed data and do not validate it themselves, so that they stay cheap.
+ * Data returned by `PcoreFile.readPcoreBinary` (unless its validation was switched off), `Converter.convertFromJson`
+ * and `DataCompressor.compress` is valid.
+ * A `DataPb` object from any other source has to be checked with `Inspector.validateCompressed` first;
+ * for invalid data the results of the `get...` methods are meaningless.
  */
 export class Inspector {
   /**
    * Returns the first Unix timestamp in the compressed data.
    * @param dataPb Compressed data protobuf object
-   * @returns First Unix timestamp in milliseconds, or 0 if not present
+   * @returns First Unix timestamp in milliseconds, or 0 if there is no timestamps container
    */
   static getFirstUnixTimestamp(dataPb: DataPb): UnixTimestamp {
     if (dataPb.compressedTimestampsContainer === undefined) {
@@ -74,22 +94,26 @@ export class Inspector {
 
   /**
    * Returns the last Unix timestamp in the compressed data.
-   * @param dataPb Compressed data protobuf object
-   * @returns Last Unix timestamp in milliseconds, or 0 if not present
+   * @param dataPb Compressed data protobuf object, valid as described for the class
+   * @returns Last Unix timestamp in milliseconds, 0 if there is no timestamps container,
+   *          or the first Unix timestamp if the container holds no sections
    */
   static getLastUnixTimestamp(dataPb: DataPb): UnixTimestamp {
     if (dataPb.compressedTimestampsContainer === undefined) {
       return 0
     }
 
-    const compressedTimestampsContainer = dataPb.compressedTimestampsContainer
-    let lastUnixTimestamp = compressedTimestampsContainer.firstUnixTimestampMs
-    for (let i = 1; i < compressedTimestampsContainer.outerSectionsDurationsMs.length; i++) {
-      lastUnixTimestamp += compressedTimestampsContainer.outerSectionsDurationsMs[i]
+    const { firstUnixTimestampMs, outerSectionsDurationsMs, innerSectionsDurationsMs, sectionsSizes } = dataPb.compressedTimestampsContainer
+    const numberOfSections = sectionsSizes.length
+    if (numberOfSections === 0) {
+      return firstUnixTimestampMs
     }
 
-    const size = compressedTimestampsContainer.innerSectionsDurationsMs.length
-    lastUnixTimestamp += compressedTimestampsContainer.innerSectionsDurationsMs[size - 1] * (compressedTimestampsContainer.sectionsSizes[size - 1] - 1)
+    let lastUnixTimestamp = firstUnixTimestampMs
+    for (let i = 1; i < numberOfSections; i++) {
+      lastUnixTimestamp += outerSectionsDurationsMs[i]
+    }
+    lastUnixTimestamp += innerSectionsDurationsMs[numberOfSections - 1] * (sectionsSizes[numberOfSections - 1] - 1)
     return lastUnixTimestamp
   }
 
@@ -111,21 +135,11 @@ export class Inspector {
    * @param dataPb Compressed data protobuf object
    * @returns Number of sensor data elements
    */
-  static getNumberOfElements(dataPb: DataPb) : number {
+  static getNumberOfElements(dataPb: DataPb): number {
     if (dataPb.sensors.length === 0) {
       return 0
     }
-    switch (dataPb.sensors[0].values.oneofKind) {
-      case "intValuesContainer": {
-        return dataPb.sensors[0].values.intValuesContainer.values.length
-      }
-      case "doubleValuesContainer": {
-        return dataPb.sensors[0].values.doubleValuesContainer.values.length
-      }
-      default: {
-        return 0
-      }
-    }
+    return getValues(dataPb.sensors[0])?.length ?? 0
   }
 
   /**
@@ -133,201 +147,332 @@ export class Inspector {
    * @param dataPb Compressed data protobuf object
    * @returns List of SensorType
    */
-  static getSensorTypes(dataPb: DataPb) : SensorType[] {
-    return (dataPb.sensors ?? []).map(sensor => sensor.type)
+  static getSensorTypes(dataPb: DataPb): SensorType[] {
+    return dataPb.sensors.map(sensor => sensor.type)
   }
 
   /**
-   * Validates the consistency of the given `Data` object.
-   * Ensures that sensor data and timestamps are aligned and both are present or absent together.
+   * Validates decompressed data before compression.
+   *
+   * The rules are the compression validation rules of the Pcore specification and are checked
+   * in the order given there. In addition, every integer (timestamps, integer values and their
+   * differences) must be a safe JavaScript integer (`Number.isSafeInteger`), because this
+   * library stores 64-bit integers as `number`, and the integer fields of the metadata and the
+   * sensor types must be integers of their protobuf type.
    *
    * @param data - The `Data` object to validate.
-   * @throws {InvalidDataException} If the data violates required structural constraints.
+   * @throws {InvalidDataException} If the data is structurally inconsistent.
+   * @throws {WrongValueException} If a single value is outside of its allowed range.
    */
   static validateDecompressed(data: Data) {
-    if (data.metadata !== undefined) {
-      if (840 <= data.metadata.timezoneOffsetMin || data.metadata.timezoneOffsetMin <= -720) {
-        throw new InvalidDataException("Inspector.validate", "TimezoneOffset must be between -720 and 840")
+    const timestamps = data.timestamps
+    const numberOfUnixTimestamps = timestamps.length
+
+    // Rule 1: at least one unix timestamp and at least one sensor
+    if (numberOfUnixTimestamps === 0 || data.sensors.length === 0) {
+      throw new InvalidDataException("Inspector.validateDecompressed", "Data must hold at least one unix timestamp and at least one sensor")
+    }
+
+    // Rule 2: every sensor has as many values as there are unix timestamps
+    data.sensors.forEach(sensor => {
+      if ((getValues(sensor)?.length ?? 0) !== numberOfUnixTimestamps) {
+        throw new InvalidDataException("Inspector.validateDecompressed", "Number of unix timestamps should be equal to the number of data points")
+      }
+    })
+
+    // Rule 3: unix timestamps are strictly increasing
+    for (let i = 1; i < numberOfUnixTimestamps; i++) {
+      if (!(timestamps[i] > timestamps[i - 1])) {
+        throw new InvalidDataException("Inspector.validateDecompressed", "Unix timestamps must be strictly increasing")
       }
     }
 
-    // case  data.timestamps.length === 0 && data.sensors.length === 0
-    // means data are empty, every thing is fine.
+    // Rule 4: no unix timestamp is negative (and, JavaScript-specific, every timestamp is a safe integer)
+    timestamps.forEach(timestamp => {
+      if (timestamp < 0) {
+        throw new WrongValueException("Inspector.validateDecompressed", "Unix timestamps must not be negative")
+      }
+      if (!Number.isSafeInteger(timestamp)) {
+        throw new WrongValueException("Inspector.validateDecompressed", "Unix timestamps must be safe integers")
+      }
+    })
 
-    if (data.timestamps.length === 0 && data.sensors.length !== 0) {
-      throw new InvalidDataException("Inspector.validate", "Data must hold unix timestamps if it has sensor data")
+    // Rule 5: every resulting inner and outer section duration fits into uint32.
+    // The durations are taken from the compressor, so that the formula of the spec exists only once.
+    const { innerSectionsDurationsMs, outerSectionsDurationsMs } = TimestampsCompressor.compress(timestamps)
+    if ([...innerSectionsDurationsMs, ...outerSectionsDurationsMs].some(sectionDuration => sectionDuration > UINT32_MAX)) {
+      throw new WrongValueException("Inspector.validateDecompressed", "Section durations must fit into uint32")
     }
 
-    if (data.timestamps.length !== 0 && data.sensors.length === 0) {
-      throw new InvalidDataException("Inspector.validate", "Data must have sensor data if it holds unix timestamps")
-    }
-
-    if (data.timestamps.length !== 0 && data.sensors.length !== 0) {
-      const timestamps = data.timestamps
-      const numberOfUnixTimestamps = timestamps.length
-
-      for (let i = 1; i < numberOfUnixTimestamps; i++) {
-        if (timestamps[i] - timestamps[i - 1] <= 0) {
-          throw new InvalidDataException("Inspector.validate", "Timestamp should be strictly monotonically increasing")
+    // Rule 6: every integer value difference (and the first value) fits into int64.
+    // JavaScript-specific: values and differences must be safe integers, which is the stricter limit.
+    data.sensors.forEach(sensor => {
+      const values = getIntValues(sensor)
+      if (values !== undefined) {
+        for (let i = 0; i < values.length; i++) {
+          const difference = i === 0 ? values[0] : values[i] - values[i - 1]
+          if (!Number.isSafeInteger(values[i]) || !Number.isSafeInteger(difference)) {
+            throw new WrongValueException("Inspector.validateDecompressed", "Integer values and their differences must be safe integers")
+          }
         }
       }
+    })
 
-      timestamps.forEach(timestamp => {
-        if (timestamp < 0) {
-          throw new InvalidDataException("Inspector.validate", "Timestamp should be positive or 0")
-        }
-      })
+    // Rule 7: every double value is finite
+    data.sensors.forEach(Inspector.checkDoubleValuesFinite)
 
-      data.sensors.forEach(sensor => {
-        Inspector.checkSensorValues(sensor, numberOfUnixTimestamps)
-        Inspector.checkSensorMetaData(sensor)
-      })
+    // Rule 8: timezone offset is between -720 and 840
+    Inspector.checkTimezoneOffset(data.metadata?.timezoneOffsetMin)
+
+    // JavaScript-specific: the version numbers are uint32 in protobuf
+    Inspector.checkVersionNumbers(data.metadata)
+
+    // Rule 9: every sensor has a sensor type set
+    data.sensors.forEach(sensor => {
+      if (sensor.type.oneofKind === undefined) {
+        throw new InvalidDataException("Inspector.validateDecompressed", "Every sensor must be a photoplethysmograph, accelerometer or electrocardiogram")
+      }
+    })
+
+    // Rule 10: no two sensors have the same identification
+    const sensorIdentifications = new Set<string>()
+    data.sensors.forEach(sensor => {
+      const sensorIdentification = Inspector.getSensorIdentification(sensor)
+      if (sensorIdentifications.has(sensorIdentification)) {
+        throw new InvalidDataException("Inspector.validateDecompressed", `Sensor identification must be unique: ${sensorIdentification}`)
+      }
+      sensorIdentifications.add(sensorIdentification)
+    })
+
+    // Rule 11: every photoplethysmograph has a light set
+    data.sensors.forEach(Inspector.checkPhotoplethysmographLight)
+
+    // Rule 12: every sensor type has allowed values
+    data.sensors.forEach(Inspector.checkSensorTypeValues)
+  }
+
+  /**
+   * Validates compressed data before decompression.
+   *
+   * The rules are the decompression validation rules of the Pcore specification and are checked
+   * in the order given there. Sensor types and the uniqueness of sensor identifications are
+   * intentionally not checked, so that files written before the `channel` fields existed can be read.
+   * In addition, every decompressed integer (timestamps and integer values) must be a safe
+   * JavaScript integer (`Number.isSafeInteger`), because this library stores 64-bit integers as `number`,
+   * and the values of the timestamps container, the metadata and the sensor types must be
+   * integers of their protobuf type.
+   *
+   * @param dataPb - The `DataPb` object to validate.
+   * @throws {InvalidDataException} If the compressed structure is inconsistent.
+   * @throws {WrongValueException} If a single value is outside of its allowed range.
+   */
+  static validateCompressed(dataPb: DataPb) {
+    const compressedTimestampsContainer = dataPb.compressedTimestampsContainer
+
+    // Rule 1: compressed timestamps with at least one section and at least one sensor
+    if (compressedTimestampsContainer === undefined || compressedTimestampsContainer.sectionsSizes.length === 0 || dataPb.sensors.length === 0) {
+      throw new InvalidDataException("Inspector.validateCompressed", "Data must hold compressed timestamps with at least one section and at least one sensor")
+    }
+
+    const outerSectionsDurations = compressedTimestampsContainer.outerSectionsDurationsMs
+    const innerSectionsDurations = compressedTimestampsContainer.innerSectionsDurationsMs
+    const sectionsSizes = compressedTimestampsContainer.sectionsSizes
+    const numberOfSections = sectionsSizes.length
+
+    // Rule 2: the three vectors of the timestamps container have the same length
+    if (outerSectionsDurations.length !== numberOfSections || innerSectionsDurations.length !== numberOfSections) {
+      throw new InvalidDataException("Inspector.validateCompressed", "Vectors in compressed_timestamps_container must have the same length")
+    }
+
+    // JavaScript-specific: the values of the timestamps container are unsigned integers in protobuf, but number
+    // also holds negative values and fractions, e.g. when the data is read from JSON. Rules 4 to 7 rely on it.
+    const firstUnixTimestamp = compressedTimestampsContainer.firstUnixTimestampMs
+    if (!Number.isSafeInteger(firstUnixTimestamp) || firstUnixTimestamp < 0 ||
+      ![sectionsSizes, innerSectionsDurations, outerSectionsDurations].every(values => values.every(Inspector.isUint32))) {
+      throw new WrongValueException("Inspector.validateCompressed", "Values in compressed_timestamps_container must be unsigned integers")
+    }
+
+    // Rule 3: every sensor has as many values as the sum of sections_sizes
+    let numberOfUnixTimestamps = 0
+    sectionsSizes.forEach(sectionSize => {
+      numberOfUnixTimestamps += sectionSize
+    })
+    dataPb.sensors.forEach(sensor => {
+      if ((getValues(sensor)?.length ?? 0) !== numberOfUnixTimestamps) {
+        throw new InvalidDataException("Inspector.validateCompressed", "Number of unix timestamps should be equal to the number of data points")
+      }
+    })
+
+    // Rule 4: all sections sizes are greater than 0
+    sectionsSizes.forEach(sectionSize => {
+      if (!(sectionSize > 0)) {
+        throw new InvalidDataException("Inspector.validateCompressed", "Any value in sections_sizes must be greater than 0")
+      }
+    })
+
+    // Rule 5: the first outer section duration is 0
+    if (outerSectionsDurations[0] !== 0) {
+      throw new InvalidDataException("Inspector.validateCompressed", "First value in outer_sections_durations_ms must always be 0")
+    }
+
+    // Rule 6: sections do not overlap, i.e. every other outer section duration is greater than
+    // the duration covered by the previous section
+    for (let i = 1; i < numberOfSections; i++) {
+      if (!(outerSectionsDurations[i] > (sectionsSizes[i - 1] - 1) * innerSectionsDurations[i - 1])) {
+        throw new InvalidDataException("Inspector.validateCompressed", "Sections in compressed_timestamps_container must not overlap")
+      }
+    }
+
+    // Rule 7: an inner section duration is 0 if and only if its section consists of a single timestamp
+    for (let i = 0; i < numberOfSections; i++) {
+      if ((innerSectionsDurations[i] === 0) !== (sectionsSizes[i] === 1)) {
+        throw new InvalidDataException("Inspector.validateCompressed", "inner_sections_durations_ms must be 0 exactly for sections with a single timestamp")
+      }
+    }
+
+    // JavaScript-specific: every decompressed unix timestamp is a safe integer.
+    // The timestamps are strictly increasing (rules 5 to 7) and the first one is a safe integer (see above),
+    // so checking the last one is sufficient.
+    if (!Number.isSafeInteger(Inspector.getLastUnixTimestamp(dataPb))) {
+      throw new WrongValueException("Inspector.validateCompressed", "Decompressed unix timestamps must be safe integers")
+    }
+
+    // Rule 8: every decompressed integer value fits into int64.
+    // JavaScript-specific: differences and decompressed values must be safe integers, which is the stricter limit.
+    dataPb.sensors.forEach(sensor => {
+      const differences = getIntValues(sensor)
+      if (differences !== undefined) {
+        let value = 0
+        differences.forEach(difference => {
+          value += difference
+          if (!Number.isSafeInteger(difference) || !Number.isSafeInteger(value)) {
+            throw new WrongValueException("Inspector.validateCompressed", "Decompressed integer values must be safe integers")
+          }
+        })
+      }
+    })
+
+    // Rule 9: every double value is finite
+    dataPb.sensors.forEach(Inspector.checkDoubleValuesFinite)
+
+    // Rule 10: timezone offset is between -720 and 840
+    Inspector.checkTimezoneOffset(dataPb.metadata?.timezoneOffsetMin)
+
+    // JavaScript-specific: the version numbers are uint32 in protobuf
+    Inspector.checkVersionNumbers(dataPb.metadata)
+
+    // Rule 11: every photoplethysmograph has a light set
+    dataPb.sensors.forEach(Inspector.checkPhotoplethysmographLight)
+
+    // Rule 12: every sensor type that is set has allowed values
+    dataPb.sensors.forEach(Inspector.checkSensorTypeValues)
+  }
+
+  /**
+   * Tells whether a number is a value of the protobuf type uint32. JavaScript-specific: the type `number`
+   * also holds negative values, fractions and NaN, which cannot be written as uint32.
+   */
+  private static isUint32(value: number | undefined): boolean {
+    return Number.isInteger(value) && 0 <= (value as number) && (value as number) <= UINT32_MAX
+  }
+
+  /**
+   * Tells whether a number is a value of the protobuf type int32, which is also the type of enum values.
+   */
+  private static isInt32(value: number): boolean {
+    return Number.isInteger(value) && INT32_MIN <= value && value <= INT32_MAX
+  }
+
+  private static checkDoubleValuesFinite(sensor: Sensor) {
+    getDoubleValues(sensor)?.forEach(value => {
+      if (!Number.isFinite(value)) {
+        throw new WrongValueException("Inspector.checkDoubleValuesFinite", "Double values must be finite")
+      }
+    })
+  }
+
+  private static checkPhotoplethysmographLight(sensor: Sensor) {
+    // the channel is defined for every photoplethysmograph, so it tells whether the sensor is one
+    const isPhotoplethysmograph = getPhotoplethysmographChannel(sensor) !== undefined
+    if (isPhotoplethysmograph && getPhotoplethysmographColor(sensor) === undefined && getPhotoplethysmographWavelength(sensor) === undefined) {
+      throw new InvalidDataException("Inspector.checkPhotoplethysmographLight", "Photoplethysmograph light must be color or wavelengthNm")
     }
   }
 
   /**
-   * Validates the internal consistency of the given compressed data object.
-   * Ensures that section sizes and durations are structurally valid and match sensor lengths.
-   *
-   * @param dataPb - The `DataPb` object to validate.
-   * @throws {InvalidDataException} If the compressed structure or metadata violates integrity rules.
+   * Checks the allowed values of a sensor type as defined in the section "Allowed sensor values"
+   * of the Pcore specification. Sensors without sensor type are not checked.
    */
-  static validateCompressed(dataPb: DataPb) {
-    if (dataPb.metadata !== undefined) {
-      if (840 <= dataPb.metadata.timezoneOffsetMin || dataPb.metadata.timezoneOffsetMin <= -720) {
-        throw new InvalidDataException("Inspector.validate", "TimezoneOffset must be between -720 and 840")
-      }
+  private static checkSensorTypeValues(sensor: Sensor) {
+    const color = getPhotoplethysmographColor(sensor)
+    if (color !== undefined && ![Color.RED, Color.GREEN, Color.BLUE].includes(color)) {
+      throw new WrongValueException("Inspector.checkSensorTypeValues", "Photoplethysmograph color should be RED, GREEN or BLUE")
+    }
+    const wavelengthNm = getPhotoplethysmographWavelength(sensor)
+    if (wavelengthNm !== undefined && (wavelengthNm < MIN_PHOTOPLETHYSMOGRAPH_WAVELENGTH_NM || wavelengthNm > MAX_PHOTOPLETHYSMOGRAPH_WAVELENGTH_NM)) {
+      throw new WrongValueException("Inspector.checkSensorTypeValues", "Photoplethysmograph wavelength should be between 350 and 1000")
+    }
+    if (getAccelerometerType(sensor) === AccelerometerType.UNSPECIFIED) {
+      throw new WrongValueException("Inspector.checkSensorTypeValues", "Accelerometer type must not be UNSPECIFIED")
+    }
+    const electrocardiogramChannel = getElectrocardiogramChannel(sensor)
+    if (electrocardiogramChannel !== undefined && electrocardiogramChannel > MAX_ELECTROCARDIOGRAM_CHANNEL) {
+      throw new WrongValueException("Inspector.checkSensorTypeValues", "Electrocardiogram channel should be smaller or equal to 22")
     }
 
-    if (dataPb.compressedTimestampsContainer !== undefined && dataPb.sensors.length === 0) {
-      throw new InvalidDataException("Inspector.validate", "Data must have sensor data if it holds compressed timestamps")
+    // JavaScript-specific: number is not limited to the protobuf types of these fields (uint32 and enum),
+    // so e.g. a channel of -1 or 1.5 would pass the rules above and fail when the binary is written
+    const channel = getPhotoplethysmographChannel(sensor) ?? getAccelerometerChannel(sensor) ?? electrocardiogramChannel
+    if (sensor.type.oneofKind !== undefined && !Inspector.isUint32(channel)) {
+      throw new WrongValueException("Inspector.checkSensorTypeValues", "Sensor channel must be an unsigned 32-bit integer")
     }
-
-    if (dataPb.compressedTimestampsContainer === undefined && dataPb.sensors.length !== 0) {
-      throw new InvalidDataException("Inspector.validate", "Data must hold compressed timestamps if it has sensor data")
+    if (wavelengthNm !== undefined && !Number.isInteger(wavelengthNm)) {
+      throw new WrongValueException("Inspector.checkSensorTypeValues", "Photoplethysmograph wavelength must be an integer")
     }
-
-    if (dataPb.compressedTimestampsContainer !== undefined && dataPb.sensors.length !== 0) {
-      const outerSectionsDurations = dataPb.compressedTimestampsContainer.outerSectionsDurationsMs
-      const innerSectionsDurations = dataPb.compressedTimestampsContainer.innerSectionsDurationsMs
-      const sectionsSizes = dataPb.compressedTimestampsContainer.sectionsSizes
-
-      const sizeOuter = outerSectionsDurations.length
-      const sizeInner = innerSectionsDurations.length
-      const sizeSizes = sectionsSizes.length
-
-      if (sizeOuter !== sizeInner || sizeInner !== sizeSizes) {
-        throw new InvalidDataException("Inspector.validate", "Vectors in compressed_timestamps_container must have the same length")
-      }
-
-      if (sizeSizes === 0) {
-        return
-      }
-
-      if (outerSectionsDurations[0] !== 0) {
-        throw new InvalidDataException("Inspector.validate", "First value in outer_sections_durations_ms must always be 0")
-      }
-      for (let i = 1; i < sizeSizes; i++) {
-        if (outerSectionsDurations[i] <= 0) {
-          throw new InvalidDataException("Inspector.validate", "Any value in outer_sections_durations_ms in pos >= 1 can not be 0 or negative")
-        }
-      }
-
-      for (let i = 0; i < sizeSizes - 1; i++) {
-        if (innerSectionsDurations[i] <= 0) {
-          throw new InvalidDataException("Inspector.validate", "Any except the last value in inner_sections_durations_ms can not be 0 or negative")
-        }
-      }
-
-      if (innerSectionsDurations[sizeInner - 1] < 0) {
-        throw new InvalidDataException("Inspector.validate", "Last value in inner_sections_durations_ms must be positive or 0")
-      }
-
-      for (let i = 0; i < sizeSizes; i++) {
-        if (sectionsSizes[i] <= 0) {
-          throw new InvalidDataException("Inspector.validate", "Any value in sections_sizes can not be 0 or negative")
-        }
-      }
-
-      let numberOfUnixTimestamps = 0
-      for (let i = 0; i < sectionsSizes.length; i++) {
-        numberOfUnixTimestamps += sectionsSizes[i]
-      }
-
-      if (numberOfUnixTimestamps === 1) {
-        if (innerSectionsDurations[0] !== 0) {
-          throw new InvalidDataException("Inspector.validate", "inner_sections_durations_ms must equal to 0 if only one unix timestamp is set")
-        }
-      }
-
-      dataPb.sensors.forEach(sensorPb => {
-        Inspector.checkSensorValues(sensorPb, numberOfUnixTimestamps)
-        Inspector.checkSensorMetaData(sensorPb)
-      })
+    const accelerometerType = getAccelerometerType(sensor)
+    if (accelerometerType !== undefined && !Inspector.isInt32(accelerometerType)) {
+      throw new WrongValueException("Inspector.checkSensorTypeValues", "Accelerometer type must be an integer")
     }
   }
 
-  private static checkSensorValues(sensor: Sensor, numberOfUnixTimestamps: number) {
-    switch (sensor.values.oneofKind) {
-      case "intValuesContainer": {
-        const values = sensor.values.intValuesContainer.values
-        if (values.length !== numberOfUnixTimestamps) {
-          throw new InvalidDataException("Inspector.validate", "Number of unix timestamps should be equal to the number of data points")
-        }
-        break
-      }
-      case "doubleValuesContainer": {
-        const values = sensor.values.doubleValuesContainer.values
-        if (values.length !== numberOfUnixTimestamps) {
-          throw new InvalidDataException("Inspector::validate", "Number of unix timestamps should be equal to the number of data points")
-        }
-        break
-      }
-      default: {
-        throw new InvalidDataException("Inspector::validate", "Sensor values must be intValuesContainer or doubleValuesContainer")
-      }
+  private static checkTimezoneOffset(timezoneOffsetMin: number | undefined) {
+    if (timezoneOffsetMin === undefined) {
+      return
+    }
+    // JavaScript-specific: the offset is an integer in protobuf, so fractions and NaN are rejected as well
+    if (!Number.isInteger(timezoneOffsetMin) || timezoneOffsetMin < MIN_TIMEZONE_OFFSET_MIN || timezoneOffsetMin > MAX_TIMEZONE_OFFSET_MIN) {
+      throw new WrongValueException("Inspector.checkTimezoneOffset", "TimezoneOffset must be an integer between -720 and 840")
     }
   }
 
-  private static checkSensorMetaData(sensor: Sensor) {
+  private static checkVersionNumbers(metadata: Metadata | undefined) {
+    const versions: (Version | undefined)[] = [metadata?.pcoreVersion, metadata?.device?.firmwareVersion]
+    versions.forEach(version => {
+      if (version !== undefined && ![version.major, version.minor, version.patch].every(Inspector.isUint32)) {
+        throw new WrongValueException("Inspector.checkVersionNumbers", "Version numbers must be unsigned 32-bit integers")
+      }
+    })
+  }
+
+  /**
+   * Returns a key that identifies a sensor by its type message including all of its fields,
+   * as defined in the section "Sensor identification" of the Pcore specification.
+   */
+  private static getSensorIdentification(sensor: Sensor): string {
     switch (sensor.type.oneofKind) {
       case "photoplethysmograph": {
-        const photoplethysmograph = sensor.type.photoplethysmograph
-        switch (photoplethysmograph.light.oneofKind) {
-          case "color": {
-            if (![Color.RED, Color.GREEN, Color.BLUE].includes(photoplethysmograph.light.color)) {
-              throw new InvalidDataException("Inspector::validate", "Photoplethysmograph color should be RED, GREEN or BLUE")
-            }
-            break
-          }
-          case "wavelengthNm": {
-            if (photoplethysmograph.light.wavelengthNm < 350 || photoplethysmograph.light.wavelengthNm > 1000) {
-              throw new InvalidDataException("Inspector::validate", "Photoplethysmograph wavelength should be between 350 and 1000")
-            }
-            break
-          }
-          default: {
-            throw new InvalidDataException("Inspector::validate", "Photoplethysmograph light must be color or wavelengthNm")
-          }
-        }
-        break
-      }
-      case "electrocardiogram": {
-        const electrocardiogram = sensor.type.electrocardiogram
-        if (electrocardiogram.channel > 22) {
-          throw new InvalidDataException("Inspector::validate", "Electrocardiogram channel should be smaller or equal to 22")
-        }
-        break
+        return `photoplethysmograph(color=${getPhotoplethysmographColor(sensor)}, wavelengthNm=${getPhotoplethysmographWavelength(sensor)}, channel=${getPhotoplethysmographChannel(sensor)})`
       }
       case "accelerometer": {
-        const accelerometer = sensor.type.accelerometer
-        if (![AccelerometerType.X_COORDINATE, AccelerometerType.Y_COORDINATE, AccelerometerType.Z_COORDINATE, AccelerometerType.EUCLIDEAN_DIFFERENCES_NORM].includes(accelerometer.type)) {
-          throw new InvalidDataException("Inspector::validate", "Accelerometer type should be X_COORDINATE, Y_COORDINATE, Z_COORDINATE or EUCLIDEAN_DIFFERENCES_NORM")
-        }
-        break
+        return `accelerometer(type=${getAccelerometerType(sensor)}, channel=${getAccelerometerChannel(sensor)})`
+      }
+      case "electrocardiogram": {
+        return `electrocardiogram(channel=${getElectrocardiogramChannel(sensor)})`
       }
       default: {
-        throw new InvalidDataException("Inspector::validate", "Sensor values must be photoplethysmograph, electrocardiogram or accelerometer")
+        /* istanbul ignore next */
+        // unreachable since rule 9 rejects sensors without type before
+        return "undefined"
       }
     }
   }

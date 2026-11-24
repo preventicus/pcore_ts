@@ -39,7 +39,7 @@ import { Sensor, Color, AccelerometerType } from "@/ProtobufDefinitions"
 export class SensorBuilder {
   private sensor: Sensor = {
     values: { oneofKind: undefined },
-    type: { oneofKind: undefined },
+    type: { oneofKind: undefined }
   }
 
   /**
@@ -50,7 +50,7 @@ export class SensorBuilder {
   withIntValues(values: number[]): this {
     this.sensor.values = {
       oneofKind: "intValuesContainer",
-      intValuesContainer: { values },
+      intValuesContainer: { values }
     }
     return this
   }
@@ -63,7 +63,7 @@ export class SensorBuilder {
   withDoubleValues(values: number[]): this {
     this.sensor.values = {
       oneofKind: "doubleValuesContainer",
-      doubleValuesContainer: { values },
+      doubleValuesContainer: { values }
     }
     return this
   }
@@ -71,17 +71,19 @@ export class SensorBuilder {
   /**
    * Sets the sensor type to Photoplethysmograph with a specific color.
    * @param color - The light color used by the photoplethysmograph.
+   * @param channel - Distinguishes several photoplethysmographs with the same light (default 0).
    * @returns The current builder instance for chaining.
    */
-  withPhotoplethysmographColor(color: Color): this {
+  withPhotoplethysmographColor(color: Color, channel: number = 0): this {
     this.sensor.type = {
       oneofKind: "photoplethysmograph",
       photoplethysmograph: {
         light: {
           oneofKind: "color",
-          color,
+          color
         },
-      },
+        channel
+      }
     }
     return this
   }
@@ -89,17 +91,19 @@ export class SensorBuilder {
   /**
    * Sets the sensor type to Photoplethysmograph with a specific wavelength.
    * @param wavelengthNm - The wavelength in nanometers used by the photoplethysmograph.
+   * @param channel - Distinguishes several photoplethysmographs with the same light (default 0).
    * @returns The current builder instance for chaining.
    */
-  withPhotoplethysmographWavelength(wavelengthNm: number): this {
+  withPhotoplethysmographWavelength(wavelengthNm: number, channel: number = 0): this {
     this.sensor.type = {
       oneofKind: "photoplethysmograph",
       photoplethysmograph: {
         light: {
           oneofKind: "wavelengthNm",
-          wavelengthNm,
+          wavelengthNm
         },
-      },
+        channel
+      }
     }
     return this
   }
@@ -107,13 +111,15 @@ export class SensorBuilder {
   /**
    * Sets the sensor type to Accelerometer with a specific coordinate type.
    * @param type - The accelerometer type (e.g. X, Y, Z coordinate or norm).
+   * @param channel - Distinguishes several accelerometers of the same type (default 0).
    * @returns The current builder instance for chaining.
    */
-  withAccelerometerType(type: AccelerometerType): this {
+  withAccelerometerType(type: AccelerometerType, channel: number = 0): this {
     this.sensor.type = {
       oneofKind: "accelerometer",
       accelerometer: {
-        type: type
+        type,
+        channel
       }
     }
     return this
@@ -136,9 +142,10 @@ export class SensorBuilder {
 
   /**
    * Finalizes and returns the constructed Sensor object.
+   * The returned object is a copy, so later changes to the builder do not affect it.
    * @returns A fully configured Sensor object.
    */
   build(): Sensor {
-    return this.sensor
+    return structuredClone(this.sensor)
   }
 }
