@@ -1,0 +1,52 @@
+name: Checks
+
+# Runs the checks of CLAUDE.md on every pull request and on pushes to main.
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+# Read-only token: the checks only read files. Pull requests from forks run with
+# their own code, so the workflow must not get write access or secrets.
+permissions:
+  contents: read
+
+# A newer push to the same branch or pull request makes an older run obsolete.
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  checks:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v5
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v5
+        with:
+          # the linter (ESLint 10) needs Node.js 20.19 or newer
+          node-version: 24
+          cache: npm
+
+      # also compiles the library into dist/ (script prepare), so this step fails on type errors in src/
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Lint
+        run: npm run lint
+
+      - name: Type check sources and tests
+        run: |
+          npx tsc --noEmit -p tsconfig.json
+          npx tsc --noEmit -p tsconfig.test.json
+
+      - name: Tests
+        run: npm test
+
+      # the generated protobuf code is part of the repository, so generate:proto is not run here:
+      # it needs network access to the spec repository and would replace the committed code
+      - name: Package contents
+        run: npm pack --dry-run

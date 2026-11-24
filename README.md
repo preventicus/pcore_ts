@@ -94,6 +94,8 @@ Only the compiled library (`dist/`) is part of the installed package, not the so
 
 Clone this repository and install the dependencies with `npm install`; this also compiles the library into `dist/`.
 `npm test` runs the tests and `npm run lint` the linter, which needs Node.js 20.19 or newer.
+The same checks, together with the type check and a test build of the package, run on GitHub for every pull request
+and every push to `main` (`.github/workflows/checks.yml`).
 
 The protobuf code in `src/generated/pcore/` is part of the repository. `npm run generate:proto` is only needed after
 changing `.pcore-version`: it fetches the Pcore definition from GitHub and replaces the generated code.

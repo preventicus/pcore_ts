@@ -10,6 +10,8 @@ This repo is **one implementation of a language-agnostic format spec**. The spec
 
 ## Commands
 
+The CI (`.github/workflows/checks.yml`, GitHub Actions on Node.js 24) runs `npm ci` (which also builds `dist/` via `prepare`), `npm run lint`, both `tsc --noEmit` checks, `npm test` and `npm pack --dry-run` on every pull request and on pushes to `main`; keep it in sync when these commands change. It deliberately does not run `generate:proto` (network access, replaces committed code).
+
 ```bash
 npm run generate:proto        # regenerate src/generated/pcore/ from the upstream .proto (see below)
 npm run build                 # generate:proto → lint → test → tsc → tsc-alias
