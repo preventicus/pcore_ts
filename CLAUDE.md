@@ -92,6 +92,6 @@ Timestamps are split into *sections* of constant sampling interval (`TimestampsC
 
 ## Tests
 
-`tests/` mirrors `src/` (`tests/compress/`, `tests/decompress/`, `tests/tools/`) and runs under `tsconfig.test.json` (which includes `tests/**` — the main `tsconfig.json` excludes them). Coverage ignores `src/generated/`, `index`, `Exception`, `ProtobufDefinitions`, `DataForm`. Test names are inherited from the spec repo's `unittest/` files — see "The spec repo" above before adding or renaming cases.
+`tests/` mirrors `src/` (`tests/compress/`, `tests/decompress/`, `tests/tools/`) and runs under `tsconfig.test.json` (which includes `tests/**` — the main `tsconfig.json` excludes them). Coverage ignores `src/generated/`, `index`, `Exception`, `ProtobufDefinitions`, `DataForm` and everything below `tests/` (the test helpers). Test names are inherited from the spec repo's `unittest/` files — see "The spec repo" above before adding or renaming cases.
 
 File tests write their `.pcore`/`.json` files into a fresh temporary directory (`fs.mkdtempSync` in `beforeAll`) and delete it in `afterAll`, so nothing is left in the source tree; the gitignored patterns `*.pcore`/`*.pcore.json` remain for the files written by the examples. Import `PcoreVersion` in tests from `@generated/pcoreVersion`, never from `dist/` (a stale local `dist/` silently yields an old version).
