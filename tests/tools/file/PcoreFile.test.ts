@@ -35,10 +35,10 @@ import * as fs from "fs"
 import * as os from "os"
 import * as nodePath from "path"
 import { AccelerometerType, Color, DataPb } from "@/ProtobufDefinitions"
-import { Converter, DataBuilder, DataCompressor, DataDecompressor, DataForm, File, InvalidDataException, MetadataBuilder, SensorBuilder, WrongValueException } from "@/index"
+import { Converter, DataBuilder, DataCompressor, DataDecompressor, DataForm, File, InvalidDataException, MetadataBuilder, PcoreFile, SensorBuilder, WrongValueException } from "@/index"
 import { PcoreVersion } from "@generated/pcoreVersion"
 
-describe("FileTest", () => {
+describe("PcoreFileTest", () => {
   // every run writes its files into a fresh directory, so no file of an earlier run can make a test pass
   let directory: string
 
@@ -50,10 +50,15 @@ describe("FileTest", () => {
     fs.rmSync(directory, { recursive: true, force: true })
   })
 
+  test("DeprecatedFileNameTest", () => {
+    // the former class name stays available for existing users
+    expect(File).toBe(PcoreFile)
+  })
+
   test("PcoreEmptyDataTest", () => {
     // empty data is not valid since Pcore 2.1.0 and is not written
     const path = nodePath.join(directory, "emptyTest.pcore")
-    expect(() => File.writePcoreBinary(DataPb.create(), path)).toThrow(InvalidDataException)
+    expect(() => PcoreFile.writePcoreBinary(DataPb.create(), path)).toThrow(InvalidDataException)
     expect(fs.existsSync(path)).toBe(false)
   })
 
@@ -62,7 +67,7 @@ describe("FileTest", () => {
     const path = nodePath.join(directory, "emptyFileTest.pcore")
     fs.writeFileSync(path, "")
 
-    const dataPbRead = File.readPcoreBinary(path)
+    const dataPbRead = PcoreFile.readPcoreBinary(path)
 
     expect(dataPbRead.sensors.length).toBe(0)
     expect(dataPbRead.compressedTimestampsContainer).toBeUndefined()
@@ -76,11 +81,11 @@ describe("FileTest", () => {
     const sensor = new SensorBuilder().withIntValues([7]).withElectrocardiogramChannel(1).build()
     const data = new DataBuilder().withTimestamps([1]).withSensor(sensor).build()
     const dataPbWrite = DataCompressor.compress(data)
-    expect(() => File.writePcoreBinary(dataPbWrite, path)).not.toThrow()
+    expect(() => PcoreFile.writePcoreBinary(dataPbWrite, path)).not.toThrow()
     expect(fs.existsSync(path)).toBe(true)
     expect(fs.statSync(path).size).toBeGreaterThan(0)
 
-    const dataPbRead = File.readPcoreBinary(path)
+    const dataPbRead = PcoreFile.readPcoreBinary(path)
 
     expect(dataPbRead).toEqual(dataPbWrite)
     expect(dataPbRead.metadata!.pcoreVersion!.major).toBe(PcoreVersion.major)
@@ -96,10 +101,10 @@ describe("FileTest", () => {
     if (dataPbWrite.sensors[0].values.oneofKind === "intValuesContainer") {
       dataPbWrite.sensors[0].values.intValuesContainer.values = [2 ** 60]
     }
-    // written without File.writePcoreBinary, which would reject the value
+    // written without PcoreFile.writePcoreBinary, which would reject the value
     fs.writeFileSync(path, DataPb.toBinary(dataPbWrite))
 
-    expect(() => File.readPcoreBinary(path)).toThrow(WrongValueException)
+    expect(() => PcoreFile.readPcoreBinary(path)).toThrow(WrongValueException)
   })
 
   test("PcoreTruncatedFileTest", () => {
@@ -110,8 +115,8 @@ describe("FileTest", () => {
     const raw = DataPb.toBinary(dataPbWrite)
     fs.writeFileSync(path, raw.subarray(0, raw.length - 1))
 
-    expect(() => File.readPcoreBinary(path)).toThrow(InvalidDataException)
-    expect(() => File.readPcoreBinary(path)).toThrow("File.readPcoreBinary: The file cannot be decoded as Pcore data")
+    expect(() => PcoreFile.readPcoreBinary(path)).toThrow(InvalidDataException)
+    expect(() => PcoreFile.readPcoreBinary(path)).toThrow("PcoreFile.readPcoreBinary: The file cannot be decoded as Pcore data")
   })
 
   test("PcoreForeignFileTest", () => {
@@ -119,15 +124,15 @@ describe("FileTest", () => {
     const path = nodePath.join(directory, "foreignFileTest.pcore")
     fs.writeFileSync(path, "this is not a Pcore file")
 
-    expect(() => File.readPcoreBinary(path)).toThrow(InvalidDataException)
+    expect(() => PcoreFile.readPcoreBinary(path)).toThrow(InvalidDataException)
   })
 
   test("PcoreMissingFileTest", () => {
     // no spec counterpart, the spec does not cover file handling: errors of the file system are passed on unchanged
     const path = nodePath.join(directory, "missingFileTest.pcore")
 
-    expect(() => File.readPcoreBinary(path)).toThrow(expect.objectContaining({ code: "ENOENT" }))
-    expect(() => File.readPcoreBinary(path)).not.toThrow(InvalidDataException)
+    expect(() => PcoreFile.readPcoreBinary(path)).toThrow(expect.objectContaining({ code: "ENOENT" }))
+    expect(() => PcoreFile.readPcoreBinary(path)).not.toThrow(InvalidDataException)
   })
 
   test("PcoreNormalDataTest", () => {
@@ -174,11 +179,11 @@ describe("FileTest", () => {
 
     const dataPbWrite = DataCompressor.compress(data)
 
-    expect(() => File.writePcoreBinary(dataPbWrite, path)).not.toThrow()
+    expect(() => PcoreFile.writePcoreBinary(dataPbWrite, path)).not.toThrow()
     expect(fs.existsSync(path)).toBe(true)
     expect(fs.statSync(path).size).toBeGreaterThan(0)
 
-    const dataPbRead = File.readPcoreBinary(path)
+    const dataPbRead = PcoreFile.readPcoreBinary(path)
 
     expect(dataPbRead.sensors.length).toBe(4)
     expect(dataPbRead.sensors[0].type.oneofKind).toBe("electrocardiogram")
@@ -254,10 +259,10 @@ describe("FileTest", () => {
     const sensor = new SensorBuilder().withIntValues([7]).withElectrocardiogramChannel(1).build()
     const dataPbWrite = DataCompressor.compress(new DataBuilder().withTimestamps([1]).withSensor(sensor).build())
     const dataJsonWrite = Converter.convertToJson(dataPbWrite, DataForm.Compressed)
-    expect(() => File.writePcoreJson(dataJsonWrite, path)).not.toThrow()
+    expect(() => PcoreFile.writePcoreJson(dataJsonWrite, path)).not.toThrow()
     expect(fs.existsSync(path)).toBe(true)
 
-    const dataJsonRead = File.readPcoreJson(path)
+    const dataJsonRead = PcoreFile.readPcoreJson(path)
 
     expect(dataJsonWrite).toBe(dataJsonRead)
   })
@@ -307,11 +312,11 @@ describe("FileTest", () => {
     const dataPbWrite = DataCompressor.compress(data)
     const dataJsonWrite = Converter.convertToJson(dataPbWrite, DataForm.Compressed)
 
-    expect(() => File.writePcoreJson(dataJsonWrite, path)).not.toThrow()
+    expect(() => PcoreFile.writePcoreJson(dataJsonWrite, path)).not.toThrow()
     expect(fs.existsSync(path)).toBe(true)
     expect(fs.statSync(path).size).toBeGreaterThan(0)
 
-    const dataJsonRead = File.readPcoreJson(path)
+    const dataJsonRead = PcoreFile.readPcoreJson(path)
 
     expect(dataJsonWrite).toBe(dataJsonRead)
   })

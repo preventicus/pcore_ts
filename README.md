@@ -27,7 +27,7 @@ All of the following are exported from the package root (`src/index.ts`).
 | `DataBuilder`, `MetadataBuilder`, `SensorBuilder`    | Fluent builders for creating valid decompressed data                   |
 | `DataCompressor`                                     | Compresses metadata, timestamps and sensors into protobuf data         |
 | `DataDecompressor`                                   | Decompresses protobuf data into the decompressed data model            |
-| `File`                                               | Reading/writing binary `.pcore` and JSON files                         |
+| `PcoreFile`                                          | Reading/writing binary `.pcore` and JSON files                         |
 | `Converter`, `DataForm`                              | Converts between protobuf data and compressed or decompressed JSON     |
 | `Inspector`                                          | Reads properties of protobuf data without decompressing it, validation |
 | `DataPb`, `Sensor`, `Metadata`, `Color`, …           | Protobuf types generated from the Pcore definition                     |
@@ -59,18 +59,18 @@ To install start the `generate:proto` script.
 
 Convert .pcore file to decompressed JSON
 ```
-import { File, Converter, DataForm } from "@preventicus/pcore"
+import { PcoreFile, Converter, DataForm } from "@preventicus/pcore"
 
-const dataPb = File.readPcoreBinary("input.pcore")
+const dataPb = PcoreFile.readPcoreBinary("input.pcore")
 const json = Converter.convertToJson(dataPb, DataForm.Decompressed)
-File.writePcoreJson(json, "output.json")
+PcoreFile.writePcoreJson(json, "output.json")
 ```
 
 Convert decompressed JSON back to .pcore
 ```
-const json = File.readPcoreJson("output.json")
+const json = PcoreFile.readPcoreJson("output.json")
 const dataPb = Converter.convertFromJson(json)
-File.writePcoreBinary(dataPb, "output.pcore")
+PcoreFile.writePcoreBinary(dataPb, "output.pcore")
 ```
 
 For more examples see the `src/example` folder.

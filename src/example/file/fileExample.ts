@@ -33,7 +33,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 import { DataPb } from "@/ProtobufDefinitions"
 import { DataCompressor } from "@/compress/DataCompressor"
-import { File } from "@tools/file/File"
+import { PcoreFile } from "@tools/file/PcoreFile"
 import { data as dataWrite } from "@/example/ExampleData"
 import { Converter } from "@tools/converter/Converter"
 import { DataForm } from "@tools/converter/DataForm"
@@ -45,7 +45,7 @@ function main() {
   const dataWritePb = DataCompressor.compress(dataWrite)
 
   try {
-    File.writePcoreBinary(dataWritePb, __dirname + "/dataWrite.pcore")
+    PcoreFile.writePcoreBinary(dataWritePb, __dirname + "/dataWrite.pcore")
   } catch (e) {
     // eslint-disable-next-line no-console
     console.error("Error when writing the file: ", e)
@@ -58,7 +58,7 @@ function main() {
   let dataReadPb: DataPb
 
   try {
-    dataReadPb = File.readPcoreBinary(__dirname + "/dataWrite.pcore")
+    dataReadPb = PcoreFile.readPcoreBinary(__dirname + "/dataWrite.pcore")
   } catch (e) {
     // eslint-disable-next-line no-console
     console.error("Error when reading the file: ", e)
@@ -76,7 +76,7 @@ function main() {
    */
 
   try {
-    File.writePcoreJson(jsonRead, __dirname + "/dataWrite.pcore.json")
+    PcoreFile.writePcoreJson(jsonRead, __dirname + "/dataWrite.pcore.json")
   } catch (e) {
     // eslint-disable-next-line no-console
     console.error("Error when writing the file: ", e)
@@ -90,7 +90,7 @@ function main() {
   let dataReadJson: string
 
   try {
-    dataReadJson = File.readPcoreJson(__dirname + "/dataWrite.pcore.json")
+    dataReadJson = PcoreFile.readPcoreJson(__dirname + "/dataWrite.pcore.json")
   } catch (e) {
     // eslint-disable-next-line no-console
     console.error("Error when reading the file: ", e)

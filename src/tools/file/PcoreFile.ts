@@ -38,8 +38,9 @@ import * as fs from "node:fs"
 
 /**
  * Utility class for reading and writing Pcore data in binary and JSON formats.
+ * It is not named `File`, because that is a global class of browsers and Node.js.
  */
-export class File {
+export class PcoreFile {
   /**
    * Writes a DataPb object to disk as a Pcore binary file.
    * @param dataPb The DataPb object to write
@@ -69,10 +70,10 @@ export class File {
     } catch (error) {
       // 64-bit integers are read as `number`, protobuf-ts throws this error for values outside of ±(2^53 - 1)
       if (error instanceof Error && error.message === "cannot convert to safe number") {
-        throw new WrongValueException("File.readPcoreBinary", "64-bit integers must be safe integers")
+        throw new WrongValueException("PcoreFile.readPcoreBinary", "64-bit integers must be safe integers")
       }
       // every other decoding error means that the file is truncated, damaged or not a Pcore file
-      throw new InvalidDataException("File.readPcoreBinary", `The file cannot be decoded as Pcore data (${String(error)})`)
+      throw new InvalidDataException("PcoreFile.readPcoreBinary", `The file cannot be decoded as Pcore data (${String(error)})`)
     }
   }
 
@@ -94,3 +95,9 @@ export class File {
     return fs.readFileSync(path, { encoding: "utf8" })
   }
 }
+
+/**
+ * The former name of `PcoreFile`.
+ * @deprecated Use `PcoreFile` instead. `File` hides the global class of the same name.
+ */
+export const File = PcoreFile
