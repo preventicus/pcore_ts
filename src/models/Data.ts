@@ -47,13 +47,13 @@ export interface Data {
 
   /**
    * Unix timestamps in milliseconds associated with the sensor readings.
-   * Must be non-empty if sensor data is present.
+   * Must hold at least one timestamp, strictly increasing.
    */
   timestamps: UnixTimestamps
 
   /**
    * Array of sensors with associated integer or double values.
-   * Must be non-empty if timestamps are present.
+   * Must hold at least one sensor, each with as many values as there are timestamps.
    */
   sensors: Sensor[]
 }

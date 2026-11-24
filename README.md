@@ -51,7 +51,10 @@ the sensor types: channel, wavelength, accelerometer type, timezone offset and v
 
 Node.js 18 or newer is required (the library uses `structuredClone`).
 
-To install start the `generate:proto` script.
+Install the dependencies with `npm install`; this also compiles the library into `dist/`.
+
+The protobuf code in `src/generated/pcore/` is part of the repository. `npm run generate:proto` is only needed after
+changing `.pcore-version`: it fetches the Pcore definition from GitHub and replaces the generated code.
 
 ---
 

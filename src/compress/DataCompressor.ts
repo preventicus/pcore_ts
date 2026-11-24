@@ -54,7 +54,8 @@ export class DataCompressor {
    *
    * @param data - The `Data` object containing metadata, timestamps, and sensor data.
    * @returns A compressed `DataPb` representation of the input.
-   * @throws {InvalidDataException} If the data is inconsistent (e.g., timestamps present without sensors, or mismatched lengths).
+   * @throws {InvalidDataException} If the data is structurally inconsistent (e.g. empty data or mismatched lengths).
+   * @throws {WrongValueException} If a single value is outside of its allowed range (e.g. a negative timestamp).
    */
   static compress(data: Data): DataPb {
     Inspector.validateDecompressed(data)

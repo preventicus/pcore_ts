@@ -50,6 +50,7 @@ export class DataDecompressor {
    * @param dataPb - The compressed data in protocol buffer format (`DataPb`).
    * @returns A fully reconstructed `Data` object including metadata, timestamps, and sensors.
    * @throws {InvalidDataException} If the compressed data is structurally invalid or inconsistent.
+   * @throws {WrongValueException} If a single value is outside of its allowed range (e.g. a timezone offset of 900).
    */
   static decompress(dataPb: DataPb): Data {
     Inspector.validateCompressed(dataPb)

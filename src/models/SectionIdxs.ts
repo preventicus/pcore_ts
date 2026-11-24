@@ -32,11 +32,12 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 */
 
 /**
- * Represents the index of a section in segmented data (e.g., for timestamps).
+ * The index of the timestamp at which a section starts, i.e. a position in the list of
+ * timestamps and not the number of the section.
  */
 export type SectionIdx = number
 
 /**
- * Represents a list of section indices used for referencing multiple sections.
+ * The start indices of all sections, in ascending order. The first one is 0; the list is empty if there are no timestamps.
  */
 export type SectionIdxs = SectionIdx[]

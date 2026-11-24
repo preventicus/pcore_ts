@@ -99,11 +99,12 @@ export class Converter {
    * as JSON (compressed), or a human-readable decompressed format.
    *
    * @param dataPb - The protobuf data object to be converted.
-   * @param dataForm - Indicates the format of the input data (compressed or decompressed).
+   * @param dataForm - The form of the JSON to write (compressed or decompressed).
    * @param indent - Optional. Number of spaces to use for pretty-printing the output JSON.
    *                 If set to 0 (default), the output will be minified.
    * @returns A JSON string representing the protobuf data.
-   * @throws {Error} Throws if decompression or conversion fails, or if unsupported sensor types are encountered.
+   * @throws {InvalidDataException} If the data is structurally inconsistent.
+   * @throws {WrongValueException} If a single value is outside of its allowed range.
    */
   static convertToJson(dataPb: DataPb, dataForm: DataForm, indent: number = 0): string {
     switch (dataForm) {
@@ -129,7 +130,9 @@ export class Converter {
    *
    * @param json - The JSON string to convert.
    * @returns A DataPb object reconstructed from the JSON.
-   * @throws {Error} Throws if internal parsing fails or unsupported sensor types are encountered.
+   * @throws {InvalidDataException} If the string is not valid JSON, does not have the structure of one of the two
+   *                                forms or holds structurally inconsistent data.
+   * @throws {WrongValueException} If a single value is outside of its allowed range.
    */
   static convertFromJson(json: string): DataPb {
     const parsedJson = JsonStructure.parseObject(json)
@@ -156,7 +159,6 @@ export class Converter {
    *
    * @param sensor - The Sensor protobuf object.
    * @returns A DecompressedSensor JSON object.
-   * @throws {Error} If the value type is unsupported.
    */
   private static parseToDecompressedSensor(sensor: Sensor): DecompressedSensor {
     const values = getValues(sensor)
@@ -214,7 +216,7 @@ export class Converter {
    *
    * @param sensor - The decompressed sensor JSON object.
    * @returns A Sensor protobuf object.
-   * @throws {Error} If the value type is unsupported.
+   * @throws {InvalidDataException} If the value type is unsupported.
    */
   private static parseFromDecompressedSensor(sensor: DecompressedSensor): Sensor {
     const values: Sensor["values"] = (() => {
