@@ -55,16 +55,23 @@ export class PcoreFile {
   }
 
   /**
-   * Reads a Pcore binary file from disk and deserializes it into a DataPb object.
-   * The content is only decoded, not validated - decompressing it validates it.
+   * Reads a Pcore binary file from disk, deserializes it into a DataPb object and validates it.
+   * Data from a file is therefore valid compressed data, as the `Inspector` and the `Converter` expect it.
    * Errors of the file system, e.g. a missing file, are passed on unchanged.
    * @param path The path to the binary file
-   * @returns The deserialized DataPb object
-   * @throws {WrongValueException} If a 64-bit integer in the file is not a safe JavaScript integer
-   * @throws {InvalidDataException} If the content cannot be decoded, e.g. a truncated file or a file of another format
+   * @returns The deserialized and validated DataPb object
+   * @throws {InvalidDataException} If the content cannot be decoded, e.g. a truncated file or a file of
+   *                                another format, or if the data is structurally inconsistent, e.g. empty
+   * @throws {WrongValueException} If a single value is outside of its allowed range, e.g. a 64-bit integer
+   *                               that is not a safe JavaScript integer
    */
   static readPcoreBinary(path: string): DataPb {
-    const raw = fs.readFileSync(path)
+    const dataPb = PcoreFile.decode(fs.readFileSync(path))
+    Inspector.validateCompressed(dataPb)
+    return dataPb
+  }
+
+  private static decode(raw: Uint8Array): DataPb {
     try {
       return DataPb.fromBinary(raw)
     } catch (error) {

@@ -71,7 +71,12 @@ const MAX_ELECTROCARDIOGRAM_CHANNEL = 22
 export type SensorType = Sensor["type"]
 
 /**
- * Utility class for inspecting compressed data without full decompression.
+ * Utility class for inspecting compressed data without full decompression, and for validating data.
+ *
+ * The `get...` methods expect valid compressed data and do not validate it themselves, so that they stay cheap.
+ * Data returned by `PcoreFile.readPcoreBinary`, `Converter.convertFromJson` and `DataCompressor.compress` is valid.
+ * A `DataPb` object from any other source has to be checked with `Inspector.validateCompressed` first;
+ * for invalid data the results of the `get...` methods are meaningless.
  */
 export class Inspector {
   /**
@@ -88,12 +93,9 @@ export class Inspector {
 
   /**
    * Returns the last Unix timestamp in the compressed data.
-   *
-   * The data is not validated here. Only the sections that are present in all three vectors of the
-   * timestamps container are used, so a container without sections yields its first Unix timestamp.
-   *
-   * @param dataPb Compressed data protobuf object
-   * @returns Last Unix timestamp in milliseconds, or 0 if there is no timestamps container
+   * @param dataPb Compressed data protobuf object, valid as described for the class
+   * @returns Last Unix timestamp in milliseconds, 0 if there is no timestamps container,
+   *          or the first Unix timestamp if the container holds no sections
    */
   static getLastUnixTimestamp(dataPb: DataPb): UnixTimestamp {
     if (dataPb.compressedTimestampsContainer === undefined) {
@@ -101,7 +103,7 @@ export class Inspector {
     }
 
     const { firstUnixTimestampMs, outerSectionsDurationsMs, innerSectionsDurationsMs, sectionsSizes } = dataPb.compressedTimestampsContainer
-    const numberOfSections = Math.min(outerSectionsDurationsMs.length, innerSectionsDurationsMs.length, sectionsSizes.length)
+    const numberOfSections = sectionsSizes.length
     if (numberOfSections === 0) {
       return firstUnixTimestampMs
     }

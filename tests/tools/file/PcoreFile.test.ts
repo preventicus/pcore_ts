@@ -35,7 +35,7 @@ import * as fs from "fs"
 import * as os from "os"
 import * as nodePath from "path"
 import { AccelerometerType, Color, DataPb } from "@/ProtobufDefinitions"
-import { Converter, DataBuilder, DataCompressor, DataDecompressor, DataForm, File, InvalidDataException, PcoreFile, SensorBuilder, WrongValueException } from "@/index"
+import { Converter, DataBuilder, DataCompressor, DataForm, File, InvalidDataException, PcoreFile, SensorBuilder, WrongValueException } from "@/index"
 import { PcoreVersion } from "@generated/pcoreVersion"
 import { buildNormalData } from "@tests/helpers/normalData"
 
@@ -64,16 +64,31 @@ describe("PcoreFileTest", () => {
   })
 
   test("PcoreReadEmptyFileTest", () => {
-    // an empty file is read without validation, decompressing it fails
+    // an empty file decodes to empty data, which is not valid since Pcore 2.1.0 and is rejected when reading
     const path = nodePath.join(directory, "emptyFileTest.pcore")
     fs.writeFileSync(path, "")
 
-    const dataPbRead = PcoreFile.readPcoreBinary(path)
+    expect(() => PcoreFile.readPcoreBinary(path)).toThrow(InvalidDataException)
+  })
 
-    expect(dataPbRead.sensors.length).toBe(0)
-    expect(dataPbRead.compressedTimestampsContainer).toBeUndefined()
-    expect(dataPbRead.metadata).toBeUndefined()
-    expect(() => DataDecompressor.decompress(dataPbRead)).toThrow(InvalidDataException)
+  test("PcoreReadInvalidDataTest", () => {
+    // a file that can be decoded but holds invalid data is rejected when reading, so that data from a file
+    // is always valid for the Inspector; the files are written without PcoreFile.writePcoreBinary, which would reject them
+    const sensor = new SensorBuilder().withIntValues([7, 8, 9]).withElectrocardiogramChannel(1).build()
+    const validDataPb = DataCompressor.compress(new DataBuilder().withTimestamps([1, 2, 3]).withSensor(sensor).build())
+
+    const inconsistentPath = nodePath.join(directory, "inconsistentTest.pcore")
+    const inconsistentDataPb = structuredClone(validDataPb)
+    inconsistentDataPb.compressedTimestampsContainer!.innerSectionsDurationsMs = [1, 1]
+    fs.writeFileSync(inconsistentPath, DataPb.toBinary(inconsistentDataPb))
+
+    const wrongValuePath = nodePath.join(directory, "wrongValueTest.pcore")
+    const wrongValueDataPb = structuredClone(validDataPb)
+    wrongValueDataPb.metadata!.timezoneOffsetMin = 900
+    fs.writeFileSync(wrongValuePath, DataPb.toBinary(wrongValueDataPb))
+
+    expect(() => PcoreFile.readPcoreBinary(inconsistentPath)).toThrow(InvalidDataException)
+    expect(() => PcoreFile.readPcoreBinary(wrongValuePath)).toThrow(WrongValueException)
   })
 
   test("PcoreMinimalDataTest", () => {

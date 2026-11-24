@@ -47,6 +47,15 @@ the sensor types: channel, wavelength, accelerometer type, timezone offset and v
 
 ---
 
+### Validation
+
+Data is validated wherever it enters or leaves the library: `PcoreFile.readPcoreBinary`, `PcoreFile.writePcoreBinary`,
+`Converter.convertFromJson`, `Converter.convertToJson`, `DataCompressor.compress` and `DataDecompressor.decompress` throw an
+`InvalidDataException` or a `WrongValueException` for invalid data. The `get...` methods of the `Inspector` therefore do not
+validate again. For a protobuf object that was built by hand, call `Inspector.validateCompressed` before inspecting it.
+
+---
+
 ## Installation
 
 Node.js 18 or newer is required (the library uses `structuredClone`).
