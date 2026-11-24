@@ -44,7 +44,7 @@ function main() {
   console.log("First Unix Timestamp: " + Inspector.getFirstUnixTimestamp(dataPb))
   console.log("Last Unix Timestamp: " + Inspector.getLastUnixTimestamp(dataPb))
   console.log("Containing sensors: " + JSON.stringify(Inspector.getSensorTypes(dataPb)))
-  /* eslint-disable no-console */
+  /* eslint-enable no-console */
 }
 
 main()
