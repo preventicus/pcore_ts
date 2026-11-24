@@ -39,7 +39,7 @@ import { Sensor, Color, AccelerometerType } from "@/ProtobufDefinitions"
 export class SensorBuilder {
   private sensor: Sensor = {
     values: { oneofKind: undefined },
-    type: { oneofKind: undefined },
+    type: { oneofKind: undefined }
   }
 
   /**
@@ -50,7 +50,7 @@ export class SensorBuilder {
   withIntValues(values: number[]): this {
     this.sensor.values = {
       oneofKind: "intValuesContainer",
-      intValuesContainer: { values },
+      intValuesContainer: { values }
     }
     return this
   }
@@ -63,7 +63,7 @@ export class SensorBuilder {
   withDoubleValues(values: number[]): this {
     this.sensor.values = {
       oneofKind: "doubleValuesContainer",
-      doubleValuesContainer: { values },
+      doubleValuesContainer: { values }
     }
     return this
   }
@@ -80,10 +80,10 @@ export class SensorBuilder {
       photoplethysmograph: {
         light: {
           oneofKind: "color",
-          color,
+          color
         },
-        channel,
-      },
+        channel
+      }
     }
     return this
   }
@@ -100,10 +100,10 @@ export class SensorBuilder {
       photoplethysmograph: {
         light: {
           oneofKind: "wavelengthNm",
-          wavelengthNm,
+          wavelengthNm
         },
-        channel,
-      },
+        channel
+      }
     }
     return this
   }

@@ -61,7 +61,7 @@ export class DataDecompressor {
 
     const timestamps = TimestampsDecompressor.decompress(dataPb.compressedTimestampsContainer)
 
-    const sensors : Sensor[] = []
+    const sensors: Sensor[] = []
 
     dataPb.sensors.forEach(sensorPb => {
       const sensor = SensorDecompressor.decompress(sensorPb)

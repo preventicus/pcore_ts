@@ -13,13 +13,20 @@
         "sourceType": "module"
     },
     "plugins": [
-        "@typescript-eslint"
+        "@typescript-eslint",
+        "@stylistic"
     ],
     "rules": {
-        "indent": ["error", 2, {"SwitchCase": 1}],
+        "@stylistic/indent": ["error", 2, {"SwitchCase": 1}],
         "linebreak-style": ["error", "unix"],
         "quotes": ["error", "double"],
-        "semi": ["error", "never"],
+        "@stylistic/semi": ["error", "never"],
+        "@stylistic/member-delimiter-style": ["error", {
+            "multiline": { "delimiter": "none" },
+            "singleline": { "delimiter": "comma", "requireLast": false }
+        }],
+        "@stylistic/type-annotation-spacing": "error",
+        "@stylistic/comma-dangle": ["error", "never"],
         "no-console": "error",
         "eqeqeq": "error",
         "space-before-function-paren": ["error", "never"],

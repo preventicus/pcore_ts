@@ -50,41 +50,41 @@ import { JsonStructure } from "@tools/converter/JsonStructure"
 import { getPhotoplethysmographColor, getPhotoplethysmographWavelength, getValues } from "@/util/utils"
 
 interface DecompressedSensorWithoutTypeJson {
-    valuesType: string,
-    values: number[]
+  valuesType: string
+  values: number[]
 }
 
 interface DecompressedPhotoplethysmographSensorJson extends DecompressedSensorWithoutTypeJson {
-    photoplethysmograph: {
-        wavelengthNm?: number,
-        color?: string,
-        channel?: number
-    }
+  photoplethysmograph: {
+    wavelengthNm?: number
+    color?: string
+    channel?: number
+  }
 }
 
 interface DecompressedAccelerometerSensorJson extends DecompressedSensorWithoutTypeJson {
-    accelerometer: {
-        type: string,
-        channel?: number
-    }
+  accelerometer: {
+    type: string
+    channel?: number
+  }
 }
 
 interface DecompressedElectrocardiogramSensorJson extends DecompressedSensorWithoutTypeJson {
-    electrocardiogram: {
-        channel?: number
-    }
+  electrocardiogram: {
+    channel?: number
+  }
 }
 
 type DecompressedSensor =
-      DecompressedPhotoplethysmographSensorJson
-    | DecompressedAccelerometerSensorJson
-    | DecompressedElectrocardiogramSensorJson
-    | DecompressedSensorWithoutTypeJson
+  | DecompressedPhotoplethysmographSensorJson
+  | DecompressedAccelerometerSensorJson
+  | DecompressedElectrocardiogramSensorJson
+  | DecompressedSensorWithoutTypeJson
 
 interface DecompressedPcoreJson {
-    metadata?: Metadata,
-    timestamps: UnixTimestamps,
-    sensors: DecompressedSensor[]
+  metadata?: Metadata
+  timestamps: UnixTimestamps
+  sensors: DecompressedSensor[]
 }
 
 /**
@@ -124,13 +124,13 @@ export class Converter {
   }
 
   /**
-     * Converts a JSON string back into a DataPb object.
-     * Accepts both compressed and decompressed JSON structures.
-     *
-     * @param json - The JSON string to convert.
-     * @returns A DataPb object reconstructed from the JSON.
-     * @throws {Error} Throws if internal parsing fails or unsupported sensor types are encountered.
-     */
+   * Converts a JSON string back into a DataPb object.
+   * Accepts both compressed and decompressed JSON structures.
+   *
+   * @param json - The JSON string to convert.
+   * @returns A DataPb object reconstructed from the JSON.
+   * @throws {Error} Throws if internal parsing fails or unsupported sensor types are encountered.
+   */
   static convertFromJson(json: string): DataPb {
     const parsedJson = JsonStructure.parseObject(json)
     if ("compressedTimestampsContainer" in parsedJson) {
@@ -149,15 +149,15 @@ export class Converter {
   }
 
   /**
-     * Converts a Sensor protobuf object into a decompressed JSON representation.
-     *
-     * Sensors without a sensor type or photoplethysmographs without light can occur in
-     * decompressed legacy files; they are written without the missing parts.
-     *
-     * @param sensor - The Sensor protobuf object.
-     * @returns A DecompressedSensor JSON object.
-     * @throws {Error} If the value type is unsupported.
-     */
+   * Converts a Sensor protobuf object into a decompressed JSON representation.
+   *
+   * Sensors without a sensor type or photoplethysmographs without light can occur in
+   * decompressed legacy files; they are written without the missing parts.
+   *
+   * @param sensor - The Sensor protobuf object.
+   * @returns A DecompressedSensor JSON object.
+   * @throws {Error} If the value type is unsupported.
+   */
   private static parseToDecompressedSensor(sensor: Sensor): DecompressedSensor {
     const values = getValues(sensor)
     /* istanbul ignore if */
@@ -207,15 +207,15 @@ export class Converter {
   }
 
   /**
-     * Converts a decompressed JSON representation of a sensor back into a Sensor protobuf object.
-     *
-     * Missing `channel` fields (e.g. in JSON written before they existed) default to 0.
-     * A sensor without sensor type is converted as such and rejected by the validation in `DataCompressor.compress`.
-     *
-     * @param sensor - The decompressed sensor JSON object.
-     * @returns A Sensor protobuf object.
-     * @throws {Error} If the value type is unsupported.
-     */
+   * Converts a decompressed JSON representation of a sensor back into a Sensor protobuf object.
+   *
+   * Missing `channel` fields (e.g. in JSON written before they existed) default to 0.
+   * A sensor without sensor type is converted as such and rejected by the validation in `DataCompressor.compress`.
+   *
+   * @param sensor - The decompressed sensor JSON object.
+   * @returns A Sensor protobuf object.
+   * @throws {Error} If the value type is unsupported.
+   */
   private static parseFromDecompressedSensor(sensor: DecompressedSensor): Sensor {
     const values: Sensor["values"] = (() => {
       switch (sensor.valuesType) {

@@ -132,7 +132,7 @@ export class Inspector {
    * @param dataPb Compressed data protobuf object
    * @returns Number of sensor data elements
    */
-  static getNumberOfElements(dataPb: DataPb) : number {
+  static getNumberOfElements(dataPb: DataPb): number {
     if (dataPb.sensors.length === 0) {
       return 0
     }
@@ -144,7 +144,7 @@ export class Inspector {
    * @param dataPb Compressed data protobuf object
    * @returns List of SensorType
    */
-  static getSensorTypes(dataPb: DataPb) : SensorType[] {
+  static getSensorTypes(dataPb: DataPb): SensorType[] {
     return (dataPb.sensors ?? []).map(sensor => sensor.type)
   }
 

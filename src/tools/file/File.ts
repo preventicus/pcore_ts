@@ -62,7 +62,7 @@ export class File {
    * @throws {WrongValueException} If a 64-bit integer in the file is not a safe JavaScript integer
    * @throws {InvalidDataException} If the content cannot be decoded, e.g. a truncated file or a file of another format
    */
-  static readPcoreBinary(path: string) : DataPb {
+  static readPcoreBinary(path: string): DataPb {
     const raw = fs.readFileSync(path)
     try {
       return DataPb.fromBinary(raw)

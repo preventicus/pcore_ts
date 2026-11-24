@@ -54,9 +54,9 @@ describe("DataDecompressorTest", () => {
   }
 
   interface Timestamps {
-    first: number,
-    sizes: number[],
-    inner: number[],
+    first: number
+    sizes: number[]
+    inner: number[]
     outer: number[]
   }
 
