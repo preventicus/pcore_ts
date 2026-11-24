@@ -95,6 +95,26 @@ describe("InspectorTest", () => {
     expect(Inspector.getLastUnixTimestamp(dataPb)).toBe(1030)
   })
 
+  test("GetLastUnixTimestampEmptyContainerTest", () => {
+    // the Inspector reads data that is not validated: a container without sections must not yield NaN
+    const dataPb = DataPb.create({ compressedTimestampsContainer: { firstUnixTimestampMs: 1000 } })
+    expect(Inspector.getFirstUnixTimestamp(dataPb)).toBe(1000)
+    expect(Inspector.getLastUnixTimestamp(dataPb)).toBe(1000)
+  })
+
+  test("GetLastUnixTimestampInconsistentContainerTest", () => {
+    // the Inspector reads data that is not validated: only the sections present in all three vectors are used
+    const dataPb = DataPb.create({
+      compressedTimestampsContainer: {
+        firstUnixTimestampMs: 1000,
+        innerSectionsDurationsMs: [10],
+        outerSectionsDurationsMs: [0, 50, 50],
+        sectionsSizes: [4, 2]
+      }
+    })
+    expect(Inspector.getLastUnixTimestamp(dataPb)).toBe(1030)
+  })
+
   test("GetNumberOfSectionsEmptyTest", () => {
     const dataPb = DataPb.create()
     expect(Inspector.getNumberOfSections(dataPb)).toBe(0)

@@ -87,7 +87,7 @@ export class Inspector {
   /**
    * Returns the first Unix timestamp in the compressed data.
    * @param dataPb Compressed data protobuf object
-   * @returns First Unix timestamp in milliseconds, or 0 if not present
+   * @returns First Unix timestamp in milliseconds, or 0 if there is no timestamps container
    */
   static getFirstUnixTimestamp(dataPb: DataPb): UnixTimestamp {
     if (dataPb.compressedTimestampsContainer === undefined) {
@@ -98,22 +98,29 @@ export class Inspector {
 
   /**
    * Returns the last Unix timestamp in the compressed data.
+   *
+   * The data is not validated here. Only the sections that are present in all three vectors of the
+   * timestamps container are used, so a container without sections yields its first Unix timestamp.
+   *
    * @param dataPb Compressed data protobuf object
-   * @returns Last Unix timestamp in milliseconds, or 0 if not present
+   * @returns Last Unix timestamp in milliseconds, or 0 if there is no timestamps container
    */
   static getLastUnixTimestamp(dataPb: DataPb): UnixTimestamp {
     if (dataPb.compressedTimestampsContainer === undefined) {
       return 0
     }
 
-    const compressedTimestampsContainer = dataPb.compressedTimestampsContainer
-    let lastUnixTimestamp = compressedTimestampsContainer.firstUnixTimestampMs
-    for (let i = 1; i < compressedTimestampsContainer.outerSectionsDurationsMs.length; i++) {
-      lastUnixTimestamp += compressedTimestampsContainer.outerSectionsDurationsMs[i]
+    const { firstUnixTimestampMs, outerSectionsDurationsMs, innerSectionsDurationsMs, sectionsSizes } = dataPb.compressedTimestampsContainer
+    const numberOfSections = Math.min(outerSectionsDurationsMs.length, innerSectionsDurationsMs.length, sectionsSizes.length)
+    if (numberOfSections === 0) {
+      return firstUnixTimestampMs
     }
 
-    const size = compressedTimestampsContainer.innerSectionsDurationsMs.length
-    lastUnixTimestamp += compressedTimestampsContainer.innerSectionsDurationsMs[size - 1] * (compressedTimestampsContainer.sectionsSizes[size - 1] - 1)
+    let lastUnixTimestamp = firstUnixTimestampMs
+    for (let i = 1; i < numberOfSections; i++) {
+      lastUnixTimestamp += outerSectionsDurationsMs[i]
+    }
+    lastUnixTimestamp += innerSectionsDurationsMs[numberOfSections - 1] * (sectionsSizes[numberOfSections - 1] - 1)
     return lastUnixTimestamp
   }
 
