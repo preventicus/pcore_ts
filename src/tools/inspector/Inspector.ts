@@ -32,13 +32,10 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 */
 
 import {
-  Accelerometer,
   AccelerometerType,
   Color,
   DataPb,
-  Electrocardiogram,
   Metadata,
-  Photoplethysmograph,
   Sensor,
   Version
 } from "@/ProtobufDefinitions"
@@ -67,18 +64,11 @@ const MIN_PHOTOPLETHYSMOGRAPH_WAVELENGTH_NM = 350
 const MAX_PHOTOPLETHYSMOGRAPH_WAVELENGTH_NM = 1000
 const MAX_ELECTROCARDIOGRAM_CHANNEL = 22
 
-export type SensorType = {
-  oneofKind: "photoplethysmograph";
-  photoplethysmograph: Photoplethysmograph;
-} | {
-  oneofKind: "accelerometer";
-  accelerometer: Accelerometer;
-} | {
-  oneofKind: "electrocardiogram";
-  electrocardiogram: Electrocardiogram;
-} | {
-  oneofKind: undefined;
-}
+/**
+ * The sensor type of a sensor: a photoplethysmograph, an accelerometer, an electrocardiogram or none.
+ * Derived from the generated protobuf type, so that further sensor types of the specification are included automatically.
+ */
+export type SensorType = Sensor["type"]
 
 /**
  * Utility class for inspecting compressed data without full decompression.
