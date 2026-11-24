@@ -370,14 +370,14 @@ export class Inspector {
    * also holds negative values, fractions and NaN, which cannot be written as uint32.
    */
   private static isUint32(value: number | undefined): boolean {
-    return Number.isInteger(value) && value as number >= 0 && value as number <= UINT32_MAX
+    return Number.isInteger(value) && 0 <= (value as number) && (value as number) <= UINT32_MAX
   }
 
   /**
    * Tells whether a number is a value of the protobuf type int32, which is also the type of enum values.
    */
   private static isInt32(value: number): boolean {
-    return Number.isInteger(value) && value >= INT32_MIN && value <= INT32_MAX
+    return Number.isInteger(value) && INT32_MIN <= value && value <= INT32_MAX
   }
 
   private static checkDoubleValuesFinite(sensor: Sensor) {
