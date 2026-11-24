@@ -31,10 +31,10 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 */
 
-import { MetadataBuilder } from "../builder/MetadataBuilder"
-import { AccelerometerType, Color, Sensor } from "../ProtobufDefinitions"
-import { SensorBuilder } from "../builder/SensorBuilder"
-import { DataBuilder } from "../builder/DataBuilder"
+import { MetadataBuilder } from "@/builder/MetadataBuilder"
+import { AccelerometerType, Color, Sensor } from "@/ProtobufDefinitions"
+import { SensorBuilder } from "@/builder/SensorBuilder"
+import { DataBuilder } from "@/builder/DataBuilder"
 
 const metadata = new MetadataBuilder()
   .withTimezoneOffset(300)

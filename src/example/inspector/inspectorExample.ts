@@ -31,7 +31,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 */
 
-import { data } from "../ExampleData"
+import { data } from "@/example/ExampleData"
 import { Inspector } from "@tools/inspector/Inspector"
 import { DataCompressor } from "@/compress/DataCompressor"
 

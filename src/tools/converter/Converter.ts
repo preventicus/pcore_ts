@@ -38,12 +38,12 @@ import {
   Metadata,
   Photoplethysmograph,
   Sensor
-} from "../../ProtobufDefinitions"
-import { DataCompressor } from "../../compress/DataCompressor"
+} from "@/ProtobufDefinitions"
+import { DataCompressor } from "@/compress/DataCompressor"
 import { Data } from "@/models/Data"
-import { DataDecompressor } from "../../decompress/DataDecompressor"
-import { DataForm } from "./DataForm"
-import { UnixTimestamps } from "../../models/UnixTimestamp"
+import { DataDecompressor } from "@/decompress/DataDecompressor"
+import { DataForm } from "@tools/converter/DataForm"
+import { UnixTimestamps } from "@/models/UnixTimestamp"
 import { Inspector } from "@tools/inspector/Inspector"
 import { InvalidDataException } from "@/Exception"
 import { JsonStructure } from "@tools/converter/JsonStructure"

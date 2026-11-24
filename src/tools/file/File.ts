@@ -31,7 +31,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 */
 
-import { DataPb } from "../../ProtobufDefinitions"
+import { DataPb } from "@/ProtobufDefinitions"
 import { InvalidDataException, WrongValueException } from "@/Exception"
 import { Inspector } from "@tools/inspector/Inspector"
 import * as fs from "node:fs"

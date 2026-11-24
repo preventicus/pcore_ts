@@ -28,6 +28,12 @@
         "@stylistic/type-annotation-spacing": "error",
         "@stylistic/comma-dangle": ["error", "never"],
         "no-console": "error",
+        "no-restricted-imports": ["error", {
+            "patterns": [{
+                "group": ["./*", "../*"],
+                "message": "Use the path aliases @/, @tools/ and @generated/ instead of relative imports."
+            }]
+        }],
         "eqeqeq": "error",
         "space-before-function-paren": ["error", "never"],
         "object-curly-spacing": ["error", "always"],

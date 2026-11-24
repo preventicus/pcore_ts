@@ -34,7 +34,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 import { DataCompressor } from "@/compress/DataCompressor"
 import { Converter } from "@tools/converter/Converter"
 import { DataForm } from "@tools/converter/DataForm"
-import { data } from "../ExampleData"
+import { data } from "@/example/ExampleData"
 
 function main() {
   const dataPb = DataCompressor.compress(data)

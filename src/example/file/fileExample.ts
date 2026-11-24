@@ -31,10 +31,10 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 */
 
-import { DataPb } from "../../ProtobufDefinitions"
+import { DataPb } from "@/ProtobufDefinitions"
 import { DataCompressor } from "@/compress/DataCompressor"
 import { File } from "@tools/file/File"
-import { data as dataWrite } from "../ExampleData"
+import { data as dataWrite } from "@/example/ExampleData"
 import { Converter } from "@tools/converter/Converter"
 import { DataForm } from "@tools/converter/DataForm"
 
