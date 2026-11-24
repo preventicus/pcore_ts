@@ -365,5 +365,26 @@ describe("ConverterTest", () => {
     const compressedJson = compressedEcgJson().replace("[\"1\",\"1\",\"1\"]", "[\"9223372036854775807\",\"1\",\"1\"]")
     expect(compressedJson).toContain("9223372036854775807")
     expect(() => Converter.convertFromJson(compressedJson)).toThrow(WrongValueException)
+
+    // the library recognizes the values itself and does not depend on an error text of protobuf-ts:
+    // as number, beyond 64 bit, in the first unix timestamp, and under the field names of the proto file
+    const json = compressedEcgJson()
+    const unsafeJsons = [
+      json.replace("[\"1\",\"1\",\"1\"]", "[9223372036854775807,1,1]"),
+      json.replace("[\"1\",\"1\",\"1\"]", "[\"-9007199254740992\",\"1\",\"1\"]"),
+      json.replace("[\"1\",\"1\",\"1\"]", "[\"99999999999999999999999999\",\"1\",\"1\"]"),
+      json.replace("\"firstUnixTimestampMs\":\"10\"", "\"firstUnixTimestampMs\":\"9007199254740992\""),
+      json.replace("\"firstUnixTimestampMs\":\"10\"", "\"first_unix_timestamp_ms\":9007199254740992")
+        .replace("compressedTimestampsContainer", "compressed_timestamps_container")
+    ]
+    unsafeJsons.forEach(unsafeJson => {
+      expect(unsafeJson).not.toBe(json)
+      expect(() => Converter.convertFromJson(unsafeJson)).toThrow(WrongValueException)
+    })
+
+    // the largest safe integer is read; a text that is no integer is a structural error
+    const maxJson = json.replace("\"firstUnixTimestampMs\":\"10\"", "\"firstUnixTimestampMs\":\"9007199254740000\"")
+    expect(Converter.convertFromJson(maxJson).compressedTimestampsContainer!.firstUnixTimestampMs).toBe(9007199254740000)
+    expect(() => Converter.convertFromJson(json.replace("[\"1\",\"1\",\"1\"]", "[\"abc\",\"1\",\"1\"]"))).toThrow(InvalidDataException)
   })
 })

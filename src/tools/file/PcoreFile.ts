@@ -34,6 +34,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 import { DataPb } from "@/ProtobufDefinitions"
 import { InvalidDataException, WrongValueException } from "@/Exception"
 import { Inspector } from "@tools/inspector/Inspector"
+import { SafeIntegerReader } from "@tools/file/SafeIntegerReader"
 import * as fs from "node:fs"
 
 /**
@@ -91,11 +92,11 @@ export class PcoreFile {
 
   private static decode(raw: Uint8Array): DataPb {
     try {
-      return DataPb.fromBinary(raw)
+      return DataPb.fromBinary(raw, { readerFactory: bytes => new SafeIntegerReader(bytes) })
     } catch (error) {
-      // 64-bit integers are read as `number`, protobuf-ts throws this error for values outside of ±(2^53 - 1)
-      if (error instanceof Error && error.message === "cannot convert to safe number") {
-        throw new WrongValueException("PcoreFile.readPcoreBinary", "64-bit integers must be safe integers")
+      // thrown by the SafeIntegerReader for a 64-bit integer outside of ±(2^53 - 1)
+      if (error instanceof WrongValueException) {
+        throw error
       }
       // every other decoding error means that the file is truncated, damaged or not a Pcore file
       throw new InvalidDataException("PcoreFile.readPcoreBinary", `The file cannot be decoded as Pcore data (${String(error)})`)

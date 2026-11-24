@@ -33,7 +33,10 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 import { DataPb, Metadata } from "@/ProtobufDefinitions"
 import { InvalidDataException, WrongValueException } from "@/Exception"
-import { JsonValue } from "@protobuf-ts/runtime"
+import { IMessageType, JsonValue, ScalarType } from "@protobuf-ts/runtime"
+
+const MAX_SAFE_INTEGER = BigInt(Number.MAX_SAFE_INTEGER)
+const SCALAR_TYPES_WITH_64_BIT = [ScalarType.INT64, ScalarType.UINT64, ScalarType.SINT64, ScalarType.FIXED64, ScalarType.SFIXED64]
 
 /**
  * Reads the two JSON forms of `Converter.convertFromJson` into typed data: the compressed form, which is
@@ -114,15 +117,49 @@ export class JsonStructure {
    * @throws {WrongValueException} If a 64-bit integer is not a safe JavaScript integer.
    */
   static parseCompressed(json: Record<string, unknown>): DataPb {
+    // checked before reading: protobuf-ts would reject such a value with an error that can only be recognized by its message text
+    JsonStructure.checkSafeIntegers(DataPb, json)
     try {
       return DataPb.fromJson(json as JsonValue, { ignoreUnknownFields: true })
     } catch (error) {
-      // 64-bit integers are read as `number`, protobuf-ts ends its message like this for values outside of ±(2^53 - 1)
-      if (error instanceof Error && error.message.endsWith("cannot convert to safe number")) {
-        throw new WrongValueException("JsonStructure.parseCompressed", "64-bit integers must be safe integers")
-      }
       throw new InvalidDataException("JsonStructure.parseCompressed", `json is not compressed Pcore data in the protobuf JSON format (${String(error)})`)
     }
+  }
+
+  /**
+   * Checks every 64-bit integer field of protobuf JSON, since this library reads 64-bit integers as `number`.
+   * The fields are found with the reflection information of the generated message type, so the check
+   * follows the proto file. Everything else that is wrong with the JSON is left to the reader.
+   * @throws {WrongValueException} If a 64-bit integer is outside of the safe integer range ±(2^53 - 1).
+   */
+  private static checkSafeIntegers(messageType: Pick<IMessageType<object>, "fields">, json: unknown) {
+    if (!JsonStructure.isObject(json)) {
+      return
+    }
+    for (const field of messageType.fields) {
+      // protobuf JSON allows the JSON name and the name of the proto file
+      const fieldValue = json[field.jsonName] ?? json[field.name]
+      const values: unknown[] = Array.isArray(fieldValue) ? fieldValue : [fieldValue]
+      if (field.kind === "message") {
+        values.forEach(value => JsonStructure.checkSafeIntegers(field.T(), value))
+      } else if (field.kind === "scalar" && SCALAR_TYPES_WITH_64_BIT.includes(field.T) && values.some(JsonStructure.isUnsafeInteger)) {
+        throw new WrongValueException("JsonStructure.checkSafeIntegers", `64-bit integers must be safe integers: ${field.name}`)
+      }
+    }
+  }
+
+  /**
+   * Tells whether a JSON value is an integer outside of the safe integer range, given as number or as string.
+   */
+  private static isUnsafeInteger(value: unknown): boolean {
+    if (typeof value === "number") {
+      return Number.isInteger(value) && !Number.isSafeInteger(value)
+    }
+    if (typeof value === "string" && /^-?[0-9]+$/.test(value)) {
+      const integer = BigInt(value)
+      return !(-MAX_SAFE_INTEGER <= integer && integer <= MAX_SAFE_INTEGER)
+    }
+    return false
   }
 
   /**

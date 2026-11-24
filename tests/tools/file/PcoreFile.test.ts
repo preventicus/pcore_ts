@@ -34,6 +34,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 import * as fs from "fs"
 import * as os from "os"
 import * as nodePath from "path"
+import { BinaryWriter, WireType } from "@protobuf-ts/runtime"
 import { AccelerometerType, Color, DataPb } from "@/ProtobufDefinitions"
 import { Converter, DataBuilder, DataCompressor, DataDecompressor, DataForm, File, InvalidDataException, PcoreFile, SensorBuilder, WrongValueException } from "@/index"
 import { PcoreVersion } from "@generated/pcoreVersion"
@@ -146,6 +147,34 @@ describe("PcoreFileTest", () => {
     fs.writeFileSync(path, DataPb.toBinary(dataPbWrite))
 
     expect(() => PcoreFile.readPcoreBinary(path)).toThrow(WrongValueException)
+    // the library recognizes the value itself and does not depend on an error text of protobuf-ts
+    expect(() => PcoreFile.readPcoreBinary(path)).toThrow("64-bit integers must be safe integers, but the data holds 1152921504606846976")
+    // the check belongs to decoding, so it does not depend on the validation
+    expect(() => PcoreFile.readPcoreBinary(path, { validate: false })).toThrow(WrongValueException)
+
+    // the first unix timestamp is the other 64-bit integer of the format
+    const timestampPath = nodePath.join(directory, "unsafeTimestampTest.pcore")
+    const dataPbTimestamp = DataCompressor.compress(new DataBuilder().withTimestamps([1]).withSensor(sensor).build())
+    dataPbTimestamp.compressedTimestampsContainer!.firstUnixTimestampMs = 2 ** 60
+    fs.writeFileSync(timestampPath, DataPb.toBinary(dataPbTimestamp))
+    expect(() => PcoreFile.readPcoreBinary(timestampPath)).toThrow(WrongValueException)
+
+    // protobuf-ts would read an unsigned value close to 2^64 as a small negative number without any error (here -100).
+    // The second message part is merged into the first one when decoding, so its timestamp replaces the valid one.
+    const wrappedPath = nodePath.join(directory, "wrappedTimestampTest.pcore")
+    const validRaw = DataPb.toBinary(DataCompressor.compress(new DataBuilder().withTimestamps([1]).withSensor(sensor).build()))
+    const wrappedTimestamp = new BinaryWriter().tag(2, WireType.LengthDelimited).fork().tag(1, WireType.Varint).uint64(BigInt("18446744073709551516")).join().finish()
+    fs.writeFileSync(wrappedPath, Buffer.concat([validRaw, wrappedTimestamp]))
+    expect(DataPb.fromBinary(fs.readFileSync(wrappedPath)).compressedTimestampsContainer!.firstUnixTimestampMs).toBe(-100)
+    expect(() => PcoreFile.readPcoreBinary(wrappedPath, { validate: false })).toThrow(WrongValueException)
+    expect(() => PcoreFile.readPcoreBinary(wrappedPath)).toThrow("but the data holds 18446744073709551516")
+
+    // the largest safe integer is read
+    const maxPath = nodePath.join(directory, "maxSafeIntegerTest.pcore")
+    const maxSensor = new SensorBuilder().withIntValues([Number.MAX_SAFE_INTEGER]).withElectrocardiogramChannel(1).build()
+    fs.writeFileSync(maxPath, DataPb.toBinary(DataCompressor.compress(new DataBuilder().withTimestamps([Number.MAX_SAFE_INTEGER]).withSensor(maxSensor).build())))
+    const dataPbMax = PcoreFile.readPcoreBinary(maxPath)
+    expect(dataPbMax.compressedTimestampsContainer!.firstUnixTimestampMs).toBe(Number.MAX_SAFE_INTEGER)
   })
 
   test("PcoreTruncatedFileTest", () => {
