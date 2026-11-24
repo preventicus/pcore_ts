@@ -34,10 +34,11 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 import { AccelerometerType, Color, DataPb, Sensor } from "@/ProtobufDefinitions"
 import { DataBuilder, DataCompressor, InvalidDataException, MetadataBuilder, SensorBuilder, WrongValueException } from "@/index"
 import { PcoreVersion } from "@generated/pcoreVersion"
-import { getIntValues, getDoubleValues, getAccelerometerType, getPhotoplethysmographWavelength, getPhotoplethysmographColor, getElectrocardiogramChannel } from "@/util/utils"
+import { getIntValues, getDoubleValues, getAccelerometerType, getPhotoplethysmographWavelength, getPhotoplethysmographColor, getElectrocardiogramChannel } from "@/util/SensorAccessors"
 
 describe("DataCompressorTest", () => {
   test("EmptyWithoutCompressorTest", () => {
+    // no spec counterpart: the default values of an empty DataPb object
     const dataPb = DataPb.create()
     expect(dataPb.metadata).toBeUndefined()
     expect(dataPb.compressedTimestampsContainer).toBeUndefined()
@@ -328,6 +329,7 @@ describe("DataCompressorTest", () => {
   })
 
   test("ChannelsTest", () => {
+    // no spec counterpart: the channel of a sensor type is carried over unchanged
     const sensors = [
       new SensorBuilder().withIntValues([1, 2, 3]).withPhotoplethysmographWavelength(530, 3).build(),
       new SensorBuilder().withIntValues([4, 5, 6]).withAccelerometerType(AccelerometerType.X_COORDINATE, 2).build()
@@ -338,6 +340,7 @@ describe("DataCompressorTest", () => {
   })
 
   test("CompleteTest", () => {
+    // no spec counterpart: a complete example with metadata, timestamps and several sensors
     const metadata = new MetadataBuilder()
       .withTimezoneOffset(310)
       .withDeviceId("I3212JH")

@@ -45,7 +45,7 @@ import {
   SensorBuilder
 } from "@/index"
 
-describe("UtilsTest", () => {
+describe("SensorAccessorsTest", () => {
   const ppgColor = new SensorBuilder().withIntValues([1, 2]).withPhotoplethysmographColor(Color.GREEN, 3).build()
   const ppgWavelength = new SensorBuilder().withDoubleValues([1.5, 2.5]).withPhotoplethysmographWavelength(530, 4).build()
   const acc = new SensorBuilder().withIntValues([3]).withAccelerometerType(AccelerometerType.Y_COORDINATE, 2).build()

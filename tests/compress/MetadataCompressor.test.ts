@@ -35,6 +35,7 @@ import { MetadataBuilder } from "@/builder/MetadataBuilder"
 import { PcoreVersion } from "@generated/pcoreVersion"
 import { MetadataCompressor } from "@/compress/MetadataCompressor"
 
+// The spec test cases do not cover the metadata, so these tests have no spec counterpart.
 describe("MetadataCompressorTest", () => {
   test("SetsCurrentPcoreVersionTest", () => {
     const metaData = new MetadataBuilder()

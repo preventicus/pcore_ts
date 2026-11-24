@@ -34,10 +34,11 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 import { AccelerometerType, Color, DataPb, Sensor } from "@/ProtobufDefinitions"
 import { Data, DataBuilder, DataCompressor, DataDecompressor, InvalidDataException, MetadataBuilder, SensorBuilder, WrongValueException } from "@/index"
 import { PcoreVersion } from "@generated/pcoreVersion"
-import { getIntValues, getDoubleValues, getAccelerometerType, getPhotoplethysmographWavelength, getPhotoplethysmographColor, getElectrocardiogramChannel } from "@/util/utils"
+import { getIntValues, getDoubleValues, getAccelerometerType, getPhotoplethysmographWavelength, getPhotoplethysmographColor, getElectrocardiogramChannel } from "@/util/SensorAccessors"
 
 describe("DataDecompressorTest", () => {
   test("EmptyWithoutDecompressorTest", () => {
+    // no spec counterpart: the default values of an empty DataBuilder
     const data = new DataBuilder().build()
     expect(data.metadata).toBeUndefined()
     expect(data.timestamps.length).toBe(0)
@@ -339,6 +340,7 @@ describe("DataDecompressorTest", () => {
   })
 
   test("MetaDataTest", () => {
+    // no spec counterpart: the metadata is carried over unchanged
     const metaData = new MetadataBuilder()
       .withTimezoneOffset(400)
       .withDeviceId("123")
@@ -380,6 +382,7 @@ describe("DataDecompressorTest", () => {
   })
 
   test("CompleteTest", () => {
+    // no spec counterpart: a complete example with metadata, timestamps and several sensors
     const metadataPb = new MetadataBuilder()
       .withTimezoneOffset(310)
       .withDeviceId("I3212JH")

@@ -53,7 +53,7 @@ import {
   getPhotoplethysmographColor,
   getPhotoplethysmographWavelength,
   getValues
-} from "@/util/utils"
+} from "@/util/SensorAccessors"
 
 const UINT32_MAX = 4294967295
 const INT32_MIN = -2147483648

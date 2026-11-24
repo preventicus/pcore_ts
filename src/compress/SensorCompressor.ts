@@ -32,7 +32,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 */
 
 import { IntValuesContainer, Sensor } from "@/ProtobufDefinitions"
-import { getIntValues } from "@/util/utils"
+import { getIntValues } from "@/util/SensorAccessors"
 
 /**
  * Provides compression utilities for sensor data, including delta encoding for integer sequences.

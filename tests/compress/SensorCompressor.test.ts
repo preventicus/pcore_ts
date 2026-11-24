@@ -34,9 +34,11 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 import { SensorCompressor } from "@/compress/SensorCompressor"
 import { SensorBuilder } from "@/builder/SensorBuilder"
 import { AccelerometerType, Color } from "@/ProtobufDefinitions"
-import { getIntValues, getDoubleValues, getAccelerometerType, getPhotoplethysmographWavelength, getPhotoplethysmographColor, getElectrocardiogramChannel } from "@/util/utils"
+import { getIntValues, getDoubleValues, getAccelerometerType, getPhotoplethysmographWavelength, getPhotoplethysmographColor, getElectrocardiogramChannel } from "@/util/SensorAccessors"
 
-describe("SensorCompressor", () => {
+describe("SensorCompressorTest", () => {
+  // The following four tests have no spec counterpart: the spec test cases hold sensor values only.
+  // These tests check that the sensor type and its fields are carried over unchanged.
   test("ACCTest", () => {
     const sensor = new SensorBuilder()
       .withIntValues([3, 4])
@@ -58,7 +60,7 @@ describe("SensorCompressor", () => {
     expect(getIntValues(compressed)).toEqual([3, 1])
   })
 
-  test("PPGTestWavelength", () => {
+  test("PPGWavelengthTest", () => {
     const sensor = new SensorBuilder()
       .withDoubleValues([3.1234, 4.1234])
       .withPhotoplethysmographWavelength(300)
@@ -79,7 +81,7 @@ describe("SensorCompressor", () => {
     expect(getDoubleValues(compressed)).toEqual([3.1234, 4.1234])
   })
 
-  test("PPGTestColor", () => {
+  test("PPGColorTest", () => {
     const sensor = new SensorBuilder()
       .withDoubleValues([3.123, 4.123])
       .withPhotoplethysmographColor(Color.RED)

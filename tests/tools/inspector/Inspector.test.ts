@@ -71,7 +71,7 @@ describe("InspectorTest", () => {
     expect(Inspector.getLastUnixTimestamp(dataPb)).toBe(1070)
   })
 
-  test("GetLastUnixTimestampTest2", () => {
+  test("GetLastUnixTimestampLastSectionWithSingleTimestampTest", () => {
     const dataPb = DataPb.create({
       compressedTimestampsContainer: {
         firstUnixTimestampMs: 1000,
@@ -83,7 +83,7 @@ describe("InspectorTest", () => {
     expect(Inspector.getLastUnixTimestamp(dataPb)).toBe(1050)
   })
 
-  test("GetLastUnixTimestampTest3", () => {
+  test("GetLastUnixTimestampOneSectionTest", () => {
     const dataPb = DataPb.create({
       compressedTimestampsContainer: {
         firstUnixTimestampMs: 1000,

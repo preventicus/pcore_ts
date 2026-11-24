@@ -47,7 +47,7 @@ import { UnixTimestamps } from "@/models/UnixTimestamp"
 import { Inspector } from "@tools/inspector/Inspector"
 import { InvalidDataException } from "@/Exception"
 import { JsonStructure } from "@tools/converter/JsonStructure"
-import { getPhotoplethysmographColor, getPhotoplethysmographWavelength, getValues } from "@/util/utils"
+import { getPhotoplethysmographColor, getPhotoplethysmographWavelength, getValues } from "@/util/SensorAccessors"
 
 interface DecompressedSensorWithoutTypeJson {
   valuesType: string
@@ -117,7 +117,7 @@ export class Converter {
         const decompressedPcoreJson: DecompressedPcoreJson = {
           metadata: data.metadata,
           timestamps: data.timestamps,
-          sensors: data.sensors.map(Converter.parseToDecompressedSensor)
+          sensors: data.sensors.map(Converter.toDecompressedSensorJson)
         }
         return JSON.stringify(decompressedPcoreJson, null, indent)
       }
@@ -146,7 +146,7 @@ export class Converter {
     const data: Data = {
       metadata: JsonStructure.parseMetadata(parsedJson.metadata),
       timestamps: decompressedPcoreJson.timestamps,
-      sensors: decompressedPcoreJson.sensors.map(Converter.parseFromDecompressedSensor)
+      sensors: decompressedPcoreJson.sensors.map(Converter.fromDecompressedSensorJson)
     }
     return DataCompressor.compress(data) // validation is done in compress method
   }
@@ -160,7 +160,7 @@ export class Converter {
    * @param sensor - The Sensor protobuf object.
    * @returns A DecompressedSensor JSON object.
    */
-  private static parseToDecompressedSensor(sensor: Sensor): DecompressedSensor {
+  private static toDecompressedSensorJson(sensor: Sensor): DecompressedSensor {
     const values = getValues(sensor)
     /* istanbul ignore if */
     if (values === undefined) {
@@ -218,7 +218,7 @@ export class Converter {
    * @returns A Sensor protobuf object.
    * @throws {InvalidDataException} If the value type is unsupported.
    */
-  private static parseFromDecompressedSensor(sensor: DecompressedSensor): Sensor {
+  private static fromDecompressedSensorJson(sensor: DecompressedSensor): Sensor {
     const values: Sensor["values"] = (() => {
       switch (sensor.valuesType) {
         case "intValuesContainer": {
@@ -228,7 +228,7 @@ export class Converter {
           return { oneofKind: "doubleValuesContainer", doubleValuesContainer: { values: sensor.values } }
         }
         default: {
-          throw new InvalidDataException("Converter.parseFromDecompressedSensor", `Unsupported sensor value type: ${sensor.valuesType}`)
+          throw new InvalidDataException("Converter.fromDecompressedSensorJson", `Unsupported sensor value type: ${sensor.valuesType}`)
         }
       }
     })()

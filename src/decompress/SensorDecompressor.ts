@@ -32,7 +32,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 */
 
 import { Sensor } from "@/ProtobufDefinitions"
-import { getIntValues } from "@/util/utils"
+import { getIntValues } from "@/util/SensorAccessors"
 
 /**
  * Provides functionality to decompress sensor data.

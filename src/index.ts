@@ -49,6 +49,6 @@ export * from "@/tools/converter/Converter"
 export * from "@/tools/converter/DataForm"
 
 export * from "@/ProtobufDefinitions"
-export * from "@/util/utils"
+export * from "@/util/SensorAccessors"
 export * from "@/Exception"
 

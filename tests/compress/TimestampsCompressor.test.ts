@@ -33,7 +33,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 import { TimestampsCompressor } from "@/compress/TimestampsCompressor"
 
-describe("TimestampsCompressor", () => {
+describe("TimestampsCompressorTest", () => {
   test("EmptyTimestampsTest", () => {
     const unixTimestamps: number[] = []
 
@@ -148,6 +148,7 @@ describe("TimestampsCompressor", () => {
   })
 
   test("ThreeSectionDifferentBigGapsTest", () => {
+    // no spec counterpart: an additional case of this library with three sections of different inner durations and larger gaps between them
     const timestamps = [1, 2, 3, 4, 6, 9, 20, 24, 28]
     const compressed = TimestampsCompressor.compress(timestamps)
 

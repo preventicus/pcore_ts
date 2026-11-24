@@ -45,32 +45,32 @@ export class TimestampsDecompressor {
    * - Reconstructs timestamps by iteratively adding section-level and intra-section durations.
    * - Returns an empty array if the input container is `undefined`.
    *
-   * @param compressedTimestampContainer - The compressed representation of timestamps.
+   * @param compressedTimestampsContainer - The compressed representation of timestamps.
    * @returns The full array of decompressed Unix timestamps.
    */
-  static decompress(compressedTimestampContainer?: CompressedTimestampsContainer): UnixTimestamps {
-    if (compressedTimestampContainer === undefined) {
+  static decompress(compressedTimestampsContainer?: CompressedTimestampsContainer): UnixTimestamps {
+    if (compressedTimestampsContainer === undefined) {
       return []
     }
 
-    let currentUnixTimestampInMsPb = compressedTimestampContainer.firstUnixTimestampMs
-    const outerSectionsDurationsInMsPb = compressedTimestampContainer.outerSectionsDurationsMs
-    const innerSectionsDurationsInMsPb = compressedTimestampContainer.innerSectionsDurationsMs
-    const sectionsSizesPb = compressedTimestampContainer.sectionsSizes
+    let currentUnixTimestampInMs = compressedTimestampsContainer.firstUnixTimestampMs
+    const outerSectionsDurationsInMs = compressedTimestampsContainer.outerSectionsDurationsMs
+    const innerSectionsDurationsInMs = compressedTimestampsContainer.innerSectionsDurationsMs
+    const sectionsSizes = compressedTimestampsContainer.sectionsSizes
 
     let numberOfUnixTimestamps = 0
-    for (let i = 0; i < sectionsSizesPb.length; i++) {
-      numberOfUnixTimestamps += sectionsSizesPb[i]
+    for (let i = 0; i < sectionsSizes.length; i++) {
+      numberOfUnixTimestamps += sectionsSizes[i]
     }
     const unixTimestamps = new Array<number>(numberOfUnixTimestamps)
 
     let arrayIndex = 0
-    for (let i = 0; i < sectionsSizesPb.length; i++) {
-      currentUnixTimestampInMsPb += outerSectionsDurationsInMsPb[i]
-      const sectionSize = sectionsSizesPb[i]
-      const innerDuration = innerSectionsDurationsInMsPb[i]
+    for (let i = 0; i < sectionsSizes.length; i++) {
+      currentUnixTimestampInMs += outerSectionsDurationsInMs[i]
+      const sectionSize = sectionsSizes[i]
+      const innerDuration = innerSectionsDurationsInMs[i]
       for (let j = 0; j < sectionSize; j++) {
-        unixTimestamps[arrayIndex++] = currentUnixTimestampInMsPb + j * innerDuration
+        unixTimestamps[arrayIndex++] = currentUnixTimestampInMs + j * innerDuration
       }
     }
 
