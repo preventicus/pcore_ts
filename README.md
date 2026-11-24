@@ -42,7 +42,8 @@ Data that violates this is rejected with a `WrongValueException` when compressin
 
 For the same reason the unsigned integers of the compressed timestamps (first unix timestamp, sections sizes, inner and outer
 section durations) are checked when decompressing: JavaScript `number` also holds negative values and fractions,
-which are rejected with a `WrongValueException`.
+which are rejected with a `WrongValueException`. The same applies in both directions to the integer fields of the metadata and
+the sensor types: channel, wavelength, accelerometer type, timezone offset and version numbers.
 
 ---
 

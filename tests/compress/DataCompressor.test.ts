@@ -154,6 +154,45 @@ describe("DataCompressorTest", () => {
     expect(() => compress([1, 2], [intSensor([1.5, 0])])).toThrow(WrongValueException)
   })
 
+  test("NoIntegerInSensorTypeTest", () => {
+    // JavaScript-specific: number also holds negative values and fractions, which protobuf excludes by the types uint32 and enum.
+    // Without the check these sensors would be compressed and fail only when the binary is written.
+    const sensorsWithInvalidType = [
+      new SensorBuilder().withIntValues([1]).withElectrocardiogramChannel(-1).build(),
+      new SensorBuilder().withIntValues([1]).withElectrocardiogramChannel(1.5).build(),
+      new SensorBuilder().withIntValues([1]).withElectrocardiogramChannel(NaN).build(),
+      new SensorBuilder().withIntValues([1]).withPhotoplethysmographColor(Color.GREEN, -1).build(),
+      new SensorBuilder().withIntValues([1]).withPhotoplethysmographWavelength(530, 4294967296).build(),
+      new SensorBuilder().withIntValues([1]).withPhotoplethysmographWavelength(400.5).build(),
+      new SensorBuilder().withIntValues([1]).withAccelerometerType(AccelerometerType.X_COORDINATE, 0.5).build(),
+      new SensorBuilder().withIntValues([1]).withAccelerometerType(1.5 as AccelerometerType).build()
+    ]
+    const sensorWithMaxChannel = new SensorBuilder().withIntValues([1]).withPhotoplethysmographColor(Color.GREEN, 4294967295).build()
+
+    sensorsWithInvalidType.forEach(sensor => {
+      expect(() => compress([1], [sensor])).toThrow(WrongValueException)
+    })
+    expect(() => DataPb.toBinary(compress([1], [sensorWithMaxChannel]))).not.toThrow()
+  })
+
+  test("NoIntegerTimeZoneOffsetTest", () => {
+    // JavaScript-specific: the timezone offset is an integer in protobuf
+    expect(() => compress([1], [intSensor([1])], 1.5)).toThrow(WrongValueException)
+    expect(() => compress([1], [intSensor([1])], NaN)).toThrow(WrongValueException)
+  })
+
+  test("NoUnsignedIntegerVersionTest", () => {
+    // JavaScript-specific: version numbers are uint32 in protobuf
+    const compressWithFirmwareVersion = (major: number, minor: number, patch: number) => {
+      const metadata = new MetadataBuilder().withDeviceFirmwareVersion(major, minor, patch).build()
+      return DataCompressor.compress(new DataBuilder().withTimestamps([1]).withSensor(intSensor([1])).withMetadata(metadata).build())
+    }
+    expect(() => compressWithFirmwareVersion(-1, 0, 0)).toThrow(WrongValueException)
+    expect(() => compressWithFirmwareVersion(1, 2.5, 0)).toThrow(WrongValueException)
+    expect(() => compressWithFirmwareVersion(1, 2, 4294967296)).toThrow(WrongValueException)
+    expect(() => DataPb.toBinary(compressWithFirmwareVersion(1, 2, 4294967295))).not.toThrow()
+  })
+
   test("NonFiniteDoubleValueTest", () => {
     // not covered by the spec test cases, because JSON cannot represent NaN and Infinity
     expect(() => compress([1, 2, 3], [doubleSensor([1, NaN, 3])])).toThrow(WrongValueException)

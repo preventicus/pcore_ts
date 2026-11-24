@@ -37,8 +37,10 @@ import {
   Color,
   DataPb,
   Electrocardiogram,
+  Metadata,
   Photoplethysmograph,
-  Sensor
+  Sensor,
+  Version
 } from "@/ProtobufDefinitions"
 import { UnixTimestamp } from "@/models/UnixTimestamp"
 import { Data } from "@/models/Data"
@@ -57,6 +59,8 @@ import {
 } from "@/util/utils"
 
 const UINT32_MAX = 4294967295
+const INT32_MIN = -2147483648
+const INT32_MAX = 2147483647
 const MIN_TIMEZONE_OFFSET_MIN = -720
 const MAX_TIMEZONE_OFFSET_MIN = 840
 const MIN_PHOTOPLETHYSMOGRAPH_WAVELENGTH_NM = 350
@@ -153,7 +157,8 @@ export class Inspector {
    * The rules are the compression validation rules of the Pcore specification and are checked
    * in the order given there. In addition, every integer (timestamps, integer values and their
    * differences) must be a safe JavaScript integer (`Number.isSafeInteger`), because this
-   * library stores 64-bit integers as `number`.
+   * library stores 64-bit integers as `number`, and the integer fields of the metadata and the
+   * sensor types must be integers of their protobuf type.
    *
    * @param data - The `Data` object to validate.
    * @throws {InvalidDataException} If the data is structurally inconsistent.
@@ -224,6 +229,9 @@ export class Inspector {
     // Rule 8: timezone offset is between -720 and 840
     Inspector.checkTimezoneOffset(data.metadata?.timezoneOffsetMin)
 
+    // JavaScript-specific: the version numbers are uint32 in protobuf
+    Inspector.checkVersionNumbers(data.metadata)
+
     // Rule 9: every sensor has a sensor type set
     data.sensors.forEach(sensor => {
       if (sensor.type.oneofKind === undefined) {
@@ -256,7 +264,8 @@ export class Inspector {
    * intentionally not checked, so that files written before the `channel` fields existed can be read.
    * In addition, every decompressed integer (timestamps and integer values) must be a safe
    * JavaScript integer (`Number.isSafeInteger`), because this library stores 64-bit integers as `number`,
-   * and the values of the timestamps container must be unsigned integers as in protobuf.
+   * and the values of the timestamps container, the metadata and the sensor types must be
+   * integers of their protobuf type.
    *
    * @param dataPb - The `DataPb` object to validate.
    * @throws {InvalidDataException} If the compressed structure is inconsistent.
@@ -354,6 +363,9 @@ export class Inspector {
     // Rule 10: timezone offset is between -720 and 840
     Inspector.checkTimezoneOffset(dataPb.metadata?.timezoneOffsetMin)
 
+    // JavaScript-specific: the version numbers are uint32 in protobuf
+    Inspector.checkVersionNumbers(dataPb.metadata)
+
     // Rule 11: every photoplethysmograph has a light set
     dataPb.sensors.forEach(Inspector.checkPhotoplethysmographLight)
 
@@ -367,6 +379,13 @@ export class Inspector {
    */
   private static isUint32(value: number | undefined): boolean {
     return Number.isInteger(value) && value as number >= 0 && value as number <= UINT32_MAX
+  }
+
+  /**
+   * Tells whether a number is a value of the protobuf type int32, which is also the type of enum values.
+   */
+  private static isInt32(value: number): boolean {
+    return Number.isInteger(value) && value >= INT32_MIN && value <= INT32_MAX
   }
 
   private static checkDoubleValuesFinite(sensor: Sensor) {
@@ -405,15 +424,39 @@ export class Inspector {
     if (electrocardiogramChannel !== undefined && electrocardiogramChannel > MAX_ELECTROCARDIOGRAM_CHANNEL) {
       throw new WrongValueException("Inspector.checkSensorTypeValues", "Electrocardiogram channel should be smaller or equal to 22")
     }
+
+    // JavaScript-specific: number is not limited to the protobuf types of these fields (uint32 and enum),
+    // so e.g. a channel of -1 or 1.5 would pass the rules above and fail when the binary is written
+    const channel = getPhotoplethysmographChannel(sensor) ?? getAccelerometerChannel(sensor) ?? electrocardiogramChannel
+    if (sensor.type.oneofKind !== undefined && !Inspector.isUint32(channel)) {
+      throw new WrongValueException("Inspector.checkSensorTypeValues", "Sensor channel must be an unsigned 32-bit integer")
+    }
+    if (wavelengthNm !== undefined && !Number.isInteger(wavelengthNm)) {
+      throw new WrongValueException("Inspector.checkSensorTypeValues", "Photoplethysmograph wavelength must be an integer")
+    }
+    const accelerometerType = getAccelerometerType(sensor)
+    if (accelerometerType !== undefined && !Inspector.isInt32(accelerometerType)) {
+      throw new WrongValueException("Inspector.checkSensorTypeValues", "Accelerometer type must be an integer")
+    }
   }
 
   private static checkTimezoneOffset(timezoneOffsetMin: number | undefined) {
     if (timezoneOffsetMin === undefined) {
       return
     }
-    if (timezoneOffsetMin < MIN_TIMEZONE_OFFSET_MIN || timezoneOffsetMin > MAX_TIMEZONE_OFFSET_MIN) {
-      throw new WrongValueException("Inspector.checkTimezoneOffset", "TimezoneOffset must be between -720 and 840")
+    // JavaScript-specific: the offset is an integer in protobuf, so fractions and NaN are rejected as well
+    if (!Number.isInteger(timezoneOffsetMin) || timezoneOffsetMin < MIN_TIMEZONE_OFFSET_MIN || timezoneOffsetMin > MAX_TIMEZONE_OFFSET_MIN) {
+      throw new WrongValueException("Inspector.checkTimezoneOffset", "TimezoneOffset must be an integer between -720 and 840")
     }
+  }
+
+  private static checkVersionNumbers(metadata: Metadata | undefined) {
+    const versions: (Version | undefined)[] = [metadata?.pcoreVersion, metadata?.device?.firmwareVersion]
+    versions.forEach(version => {
+      if (version !== undefined && ![version.major, version.minor, version.patch].every(Inspector.isUint32)) {
+        throw new WrongValueException("Inspector.checkVersionNumbers", "Version numbers must be unsigned 32-bit integers")
+      }
+    })
   }
 
   /**

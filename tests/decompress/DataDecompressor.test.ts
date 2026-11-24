@@ -32,7 +32,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 */
 
 import { AccelerometerType, Color, DataPb, Sensor } from "@/ProtobufDefinitions"
-import { Data, DataBuilder, DataDecompressor, InvalidDataException, MetadataBuilder, SensorBuilder, WrongValueException } from "@/index"
+import { Data, DataBuilder, DataCompressor, DataDecompressor, InvalidDataException, MetadataBuilder, SensorBuilder, WrongValueException } from "@/index"
 import { PcoreVersion } from "@generated/pcoreVersion"
 import { getIntValues, getDoubleValues, getAccelerometerType, getPhotoplethysmographWavelength, getPhotoplethysmographColor, getElectrocardiogramChannel } from "@/util/utils"
 
@@ -190,6 +190,51 @@ describe("DataDecompressorTest", () => {
     expect(() => decompress({ first: -100, sizes: [3, 2], inner: [1, 1], outer: [0, 8] }, sensors)).toThrow(WrongValueException)
     expect(() => decompress({ first: 100.5, sizes: [3, 2], inner: [1, 1], outer: [0, 8] }, sensors)).toThrow(WrongValueException)
     expect(decompress({ first: 100, sizes: [3, 2], inner: [1, 1], outer: [0, 4294967295] }, sensors).timestamps).toEqual([100, 101, 102, 4294967395, 4294967396])
+  })
+
+  test("NoIntegerInSensorTypeTest", () => {
+    // JavaScript-specific: number also holds negative values and fractions, which protobuf excludes by the types uint32 and enum
+    const timestamps = { first: 1, sizes: [1], inner: [0], outer: [0] }
+    const sensorsWithInvalidType = [
+      new SensorBuilder().withIntValues([1]).withElectrocardiogramChannel(-1).build(),
+      new SensorBuilder().withIntValues([1]).withElectrocardiogramChannel(1.5).build(),
+      new SensorBuilder().withIntValues([1]).withElectrocardiogramChannel(NaN).build(),
+      new SensorBuilder().withIntValues([1]).withPhotoplethysmographColor(Color.GREEN, -1).build(),
+      new SensorBuilder().withIntValues([1]).withPhotoplethysmographWavelength(530, 4294967296).build(),
+      new SensorBuilder().withIntValues([1]).withPhotoplethysmographWavelength(400.5).build(),
+      new SensorBuilder().withIntValues([1]).withAccelerometerType(AccelerometerType.X_COORDINATE, 0.5).build(),
+      new SensorBuilder().withIntValues([1]).withAccelerometerType(1.5 as AccelerometerType).build()
+    ]
+    const sensorWithMaxChannel = new SensorBuilder().withIntValues([1]).withPhotoplethysmographColor(Color.GREEN, 4294967295).build()
+
+    sensorsWithInvalidType.forEach(sensor => {
+      expect(() => decompress(timestamps, [sensor])).toThrow(WrongValueException)
+    })
+    expect(() => decompress(timestamps, [sensorWithMaxChannel])).not.toThrow()
+  })
+
+  test("NoIntegerTimeZoneOffsetTest", () => {
+    // JavaScript-specific: the timezone offset is an integer in protobuf
+    const timestamps = { first: 1, sizes: [1], inner: [0], outer: [0] }
+    expect(() => decompress(timestamps, [intSensor([1])], 1.5)).toThrow(WrongValueException)
+    expect(() => decompress(timestamps, [intSensor([1])], NaN)).toThrow(WrongValueException)
+  })
+
+  test("NoUnsignedIntegerVersionTest", () => {
+    // JavaScript-specific: version numbers are uint32 in protobuf
+    const decompressWithVersions = (pcoreVersionMajor: number, firmwareVersionPatch: number) => {
+      const dataPb = DataCompressor.compress(new DataBuilder().withTimestamps([1]).withSensor(intSensor([1])).build())
+      dataPb.metadata = {
+        timezoneOffsetMin: 0,
+        pcoreVersion: { major: pcoreVersionMajor, minor: 1, patch: 0 },
+        device: { name: "", manufacturer: "", id: "", firmwareVersion: { major: 1, minor: 2, patch: firmwareVersionPatch } }
+      }
+      return DataDecompressor.decompress(dataPb)
+    }
+    expect(() => decompressWithVersions(-2, 3)).toThrow(WrongValueException)
+    expect(() => decompressWithVersions(2.1, 3)).toThrow(WrongValueException)
+    expect(() => decompressWithVersions(2, -3)).toThrow(WrongValueException)
+    expect(() => decompressWithVersions(2, 4294967295)).not.toThrow()
   })
 
   test("NonFiniteDoubleValueTest", () => {
